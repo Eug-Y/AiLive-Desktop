@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>大模型管理 - LiveTalking</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    /* 页面级补充样式：只定义 common.css 里没有的钩子，组件样式一律交给设计系统 v3 */
+    .provider-scope { font-size: 12.5px; color: var(--text-secondary); }
+    .provider-scope b { color: var(--text); font-weight: 620; }
+
+    .message { min-height: 20px; margin-top: var(--space-3); font-size: 13px; }
+    .message.ok { color: var(--success); font-weight: 600; }
+    .message.bad { color: var(--danger); font-weight: 600; }
+
+    .status-line b { color: var(--text); }
+    .status-line .ok { color: var(--success-fg); font-weight: 620; }
+    .status-line .bad { color: var(--danger-fg); font-weight: 620; }
+
+    /* 连接测试结果：等宽、浅色下沉底，与全局浅色主题保持一致 */
+    .test-result {
+      min-height: 96px;
+      margin: 0;
+      padding: var(--space-4);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+<nav id="lt-nav-container"></nav>
+
+<main class="container container-narrow">
+  <div class="page-heading">
+    <div>
+      <h1 class="page-title"><i class="bi bi-cpu"></i> 大模型管理</h1>
+      <p class="page-subtitle">DeepSeek、通义千问与自定义 OpenAI 兼容接口，可运行时切换。</p>
+    </div>
+  </div>
+
+  <div class="row-split">
+    <section class="card">
+      <div class="card-header"><i class="bi bi-sliders"></i> 模型选择</div>
+      <div class="card-body">
+        <div id="activeStatus" class="alert alert-info status-line">正在读取配置…</div>
+
+        <div class="form-group">
+          <label class="form-label" for="provider">服务商</label>
+          <select id="provider" class="form-select"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="model">模型名称</label>
+          <input id="model" class="form-control" list="modelSuggestions" autocomplete="off">
+          <datalist id="modelSuggestions"></datalist>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="baseUrl">接口地址</label>
+          <input id="baseUrl" class="form-control" placeholder="https://api.example.com/v1">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="temperature">随机性（Temperature）</label>
+            <input id="temperature" class="form-control" type="number" min="0" max="2" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="maxTokens">最大输出长度</label>
+            <input id="maxTokens" class="form-control" type="number" min="32" max="8192" step="32">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="systemPrompt">系统提示词</label>
+          <textarea id="systemPrompt" class="form-control"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button id="saveConfig" class="btn btn-outline" type="button"><i class="bi bi-check2-circle"></i> 保存并切换</button>
+        </div>
+        <div id="configMessage" class="message"></div>
+      </div>
+    </section>
+
+    <section class="card card-fill-reset">
+      <div class="card-header"><i class="bi bi-key"></i> 接口密钥（API Key）</div>
+      <div class="card-body">
+        <p class="hint mb-3">密钥仅能从本机页面保存到 <code>.env</code>，接口不会返回或回显密钥。DeepSeek 与通义千问需要分别配置。</p>
+
+        <p class="provider-scope mb-3">当前服务商：<b id="keyProviderLabel">—</b>（在左侧「模型选择」中切换）</p>
+        <select id="keyProvider" class="form-select" hidden aria-hidden="true" tabindex="-1"></select>
+
+        <div class="form-group">
+          <label class="form-label" for="apiKey">新的接口密钥</label>
+          <input id="apiKey" class="form-control" type="password" autocomplete="new-password" placeholder="输入后保存，不会再次显示">
+        </div>
+
+        <div class="form-actions">
+          <button id="saveKey" class="btn btn-outline" type="button"><i class="bi bi-shield-lock"></i> 安全保存接口密钥</button>
+        </div>
+        <div id="keyMessage" class="message"></div>
+      </div>
+      <div class="card-footer">
+        <div class="hint w-100">
+          DeepSeek 官方接口通常使用 <code>deepseek-chat</code> 或 <code>deepseek-reasoner</code>。<br>
+          本地 Ollama 等服务请选择“自定义接口”，本地无鉴权时仍需填任意非空占位密钥。
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-header"><i class="bi bi-lightning-charge"></i> 连接测试</div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label" for="testMessage">测试消息</label>
+        <textarea id="testMessage" class="form-control">你好，请用一句简短的话介绍你自己。</textarea>
+      </div>
+
+      <div class="form-actions">
+        <button id="testModel" class="btn btn-primary" type="button"><i class="bi bi-lightning-charge"></i> 测试当前模型</button>
+        <a href="/subtitle.html">前往字幕应答</a>
+        <a href="/index.html">返回数字人主页</a>
+      </div>
+      <div id="testMessageStatus" class="message"></div>
+      <pre id="testResult" class="test-result">测试结果将在这里显示。</pre>
+    </div>
+  </section>
+</main>
+
+<script src="common.js"></script>
+<script>
+LT.Nav.current = 'llm';
+LT.Nav.inject('#lt-nav-container');
+
+let configData = null;
+const $ = id => document.getElementById(id);
+
+function setMessage(id, text, ok=false) {
+  const el = $(id); el.textContent = text; el.className = 'message ' + (ok ? 'ok' : 'bad');
+}
+
+async function requestJson(url, options={}) {
+  const response = await fetch(url, options);
+  const data = await response.json();
+  if (!response.ok || data.code !== 0) throw new Error(data.msg || `HTTP ${response.status}`);
+  return data.data;
+}
+
+function providerById(id) { return configData.providers.find(item => item.id === id); }
+
+function updateProviderFields(resetModel=true) {
+  const info = providerById($('provider').value);
+  $('modelSuggestions').innerHTML = '';
+  (info.models || []).forEach(name => {
+    const option = document.createElement('option'); option.value = name; $('modelSuggestions').appendChild(option);
+  });
+  if (resetModel) $('model').value = info.default_model;
+  $('baseUrl').value = info.default_base_url;
+  $('baseUrl').readOnly = info.id !== 'custom';
+  $('keyProvider').value = info.id;
+  $('keyProviderLabel').textContent = info.label;
+}
+
+function renderConfig(data) {
+  configData = data;
+  const providerSelect = $('provider');
+  const keySelect = $('keyProvider');
+  providerSelect.innerHTML = ''; keySelect.innerHTML = '';
+  data.providers.forEach(info => {
+    const suffix = info.api_key_configured ? '（已配置密钥）' : '（未配置密钥）';
+    [providerSelect, keySelect].forEach(select => {
+      const option = document.createElement('option'); option.value = info.id; option.textContent = info.label + suffix; select.appendChild(option);
+    });
+  });
+  providerSelect.value = data.active.provider;
+  keySelect.value = data.active.provider;
+  updateProviderFields(false);
+  $('model').value = data.active.model;
+  $('baseUrl').value = data.active.base_url;
+  $('temperature').value = data.active.temperature;
+  $('maxTokens').value = data.active.max_tokens;
+  $('systemPrompt').value = data.active.system_prompt;
+  const state = data.active.api_key_configured ? '<span class="ok">接口密钥已配置</span>' : '<span class="bad">接口密钥未配置</span>';
+  $('activeStatus').innerHTML = `当前服务商：<b>${providerById(data.active.provider).label}</b><br>当前模型：<b>${data.active.model}</b><br>${state}`;
+}
+
+async function loadConfig() {
+  try { renderConfig(await requestJson('/api/llm/config')); }
+  catch (error) { setMessage('configMessage', error.message); }
+}
+
+$('provider').addEventListener('change', () => updateProviderFields(true));
+$('saveConfig').addEventListener('click', async () => {
+  const button = $('saveConfig');
+  button.disabled = true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>保存中…';
+  try {
+    const data = await requestJson('/api/llm/config', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        provider:$('provider').value, model:$('model').value, base_url:$('baseUrl').value,
+        temperature:Number($('temperature').value), max_tokens:Number($('maxTokens').value),
+        system_prompt:$('systemPrompt').value
+      })
+    });
+    renderConfig(data); setMessage('configMessage','模型已切换，新的对话会立即使用此配置。',true);
+  } catch(error) { setMessage('configMessage',error.message); }
+  finally { button.disabled = false; button.innerHTML = '<i class="bi bi-check2-circle"></i> 保存并切换'; }
+});
+
+$('saveKey').addEventListener('click', async () => {
+  const button = $('saveKey');
+  button.disabled = true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>保存中…';
+  try {
+    const key = $('apiKey').value.trim(); if (!key) throw new Error('请输入接口密钥');
+    const data = await requestJson('/api/llm/credential', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({provider:$('keyProvider').value, api_key:key})
+    });
+    $('apiKey').value=''; renderConfig(data); setMessage('keyMessage','接口密钥已安全保存。',true);
+  } catch(error) { setMessage('keyMessage',error.message); }
+  finally { button.disabled = false; button.innerHTML = '<i class="bi bi-shield-lock"></i> 安全保存接口密钥'; }
+});
+
+$('testModel').addEventListener('click', async () => {
+  const button = $('testModel');
+  button.disabled=true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>测试中…';
+  $('testResult').textContent='正在等待模型回答…';
+  try {
+    const data = await requestJson('/api/llm/test', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:$('testMessage').value})
+    });
+    $('testResult').textContent=data.response || '模型返回了空内容'; setMessage('testMessageStatus','连接测试成功。',true);
+  } catch(error) { $('testResult').textContent=error.message; setMessage('testMessageStatus','测试失败：'+error.message); }
+  finally { button.disabled=false; button.innerHTML = '<i class="bi bi-lightning-charge"></i> 测试当前模型'; }
+});
+
+loadConfig();
+</script>
+</body>
+</html>

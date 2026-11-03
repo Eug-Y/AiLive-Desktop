@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互面板 - LiveTalking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 本页样式一律沿用 common.css v3 的变量与控件高度，不新增设计体系 */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-5) var(--space-4) var(--space-6);
+        }
+
+        /* ── 视频舞台 ─────────────────────────────── */
+        .video-wrapper {
+            position: relative;
+            background: #0b0e14;
+            border-radius: var(--radius);
+            overflow: hidden;
+            min-height: 360px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .video-wrapper video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* 未连接占位：绝对定位居中盖住舞台
+           （原来它是 video 的 flex 兄弟节点，被挤到右侧并被 overflow 裁掉） */
+        .empty-video {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-1);
+            padding: var(--space-5);
+            text-align: center;
+            background: rgba(11, 14, 20, 0.92);
+            color: rgba(255, 255, 255, 0.68);
+        }
+        .empty-video > i { font-size: 38px; opacity: 0.5; margin-bottom: var(--space-2); }
+        .empty-video .empty-video-title { font-size: 15px; font-weight: 620; color: #fff; }
+        .empty-video .empty-video-hint { font-size: 12.5px; }
+
+        .recording-indicator {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: rgba(220, 38, 38, 0.9);
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+        .recording-indicator.active { display: flex; }
+        .recording-indicator .blink {
+            width: 8px; height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        /* 说话可视化容器：放在本页，注进导航状态胶囊会撑破胶囊布局 */
+        #speakingViz.audio-viz { height: 24px; padding: 0; }
+
+        /* ── 对话 / 朗读面板 ──────────────────────── */
+        /* 卡片头里的标签条去掉 v3 默认的下边框与外边距 */
+        .card-header .tab-nav {
+            border: none;
+            margin: 0;
+            min-width: 0;
+            overflow: visible;
+        }
+
+        .chat-container {
+            height: 300px;
+            overflow-y: auto;
+            padding: var(--space-3);
+            background: var(--surface-sunken);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+        /* 空历史：用紧凑空状态居中，不撑满整屏 */
+        .chat-container > .empty-state { margin: auto; }
+
+        .chat-bubble {
+            padding: 9px 13px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            line-height: 1.55;
+            max-width: 88%;
+            color: var(--text);
+            word-break: break-word;
+            animation: fadein 0.25s ease;
+        }
+        .chat-bubble.user {
+            background: var(--primary-light);
+            border-left: 3px solid var(--primary);
+            align-self: flex-end;
+        }
+        .chat-bubble.system {
+            background: var(--success-bg);
+            border-left: 3px solid var(--success);
+            align-self: flex-start;
+        }
+        .chat-bubble .sender {
+            font-weight: 620;
+            font-size: 11.5px;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+        }
+
+        /* 发送按钮与多行输入框等高贴合；圆角与 -1px 重叠交给 v3 的 .input-group */
+        #chatForm .input-group > .btn { height: auto; align-self: stretch; }
+
+        .voice-record-wrap { text-align: center; margin-top: var(--space-4); }
+        .voice-record-btn {
+            width: 54px;
+            height: 54px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 21px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.28);
+            transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+        }
+        .voice-record-btn:hover { transform: scale(1.04); }
+        .voice-record-btn.recording {
+            background: linear-gradient(135deg, var(--danger), var(--danger-strong));
+            animation: voice-pulse 1.5s infinite;
+        }
+        .voice-record-label { font-size: 12.5px; color: var(--text-muted); margin-top: var(--space-2); }
+        .voice-record-label.recording { color: var(--danger); font-weight: 620; }
+        @keyframes voice-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
+            70% { box-shadow: 0 0 0 16px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        /* 标签面板：只让「激活」的面板参与布局
+           （原来两个面板写了内联 display:flex，盖掉了 .tab-panel 的隐藏规则，导致两种模式同时出现） */
+        #tab-chat.active,
+        #tab-tts.active {
+            display: flex;
+            flex-direction: column;
+            min-height: 540px;
+        }
+        /* 朗读面板：输入区吃掉剩余高度，两个模式面板高度一致，切换不跳动 */
+        #tab-tts .form-group { flex: 1; display: flex; flex-direction: column; }
+        #tab-tts textarea { flex: 1; min-height: 180px; height: auto; }
+
+        @media (max-width: 768px) {
+            .video-wrapper { min-height: 240px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav id="lt-nav-container"></nav>
+
+<div class="dashboard-container">
+    <div class="row g-4">
+        <!-- 视频区域 -->
+        <div class="col-lg-8 card-fill-reset">
+            <div class="glass-card">
+                <div class="card-header">
+                    <i class="bi bi-camera-video"></i>
+                    <span class="badge-status badge-silent" id="videoStatusBadge" title="尚未连接数字人">
+                        <span id="status-text">未连接</span>
+                    </span>
+                    <span id="speakingViz" title="数字人说话状态"></span>
+                    <div class="card-actions">
+                        <button type="button" class="btn btn-outline btn-sm" id="settingsToggle"
+                                aria-expanded="false" aria-controls="settingsPanel">
+                            <i class="bi bi-sliders"></i> 设置
+                        </button>
+                        <a href="/index.html" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-up-right"></i> 高级模式
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="video-wrapper">
+                        <video id="video" autoplay playsinline></video>
+                        <div class="recording-indicator" id="rec-indicator">
+                            <div class="blink"></div> 录制中
+                        </div>
+                        <div id="videoEmpty" class="empty-video">
+                            <i class="bi bi-camera-video-off"></i>
+                            <span class="empty-video-title">数字人尚未连接</span>
+                            <span class="empty-video-hint">点击下方「开始连接」建立实时连接后即可开始对话与录制。</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3">
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <button class="btn btn-primary" id="btnConnect">
+                                <i class="bi bi-play-fill"></i> 开始连接
+                            </button>
+                            <button class="btn btn-danger" id="btnDisconnect" style="display:none;">
+                                <i class="bi bi-x-circle"></i> 断开连接
+                            </button>
+                            <button class="btn btn-outline" id="btnStartRec" disabled
+                                    title="连接成功后才能开始录制">
+                                <i class="bi bi-record-circle"></i> 开始录制
+                            </button>
+                            <button class="btn btn-danger" id="btnStopRec" disabled
+                                    title="仅在录制中可用">
+                                <i class="bi bi-stop-circle"></i> 停止录制
+                            </button>
+                            <label class="form-switch ms-1" title="STUN 服务器（网络穿透）：在复杂网络下协助建立实时连接">
+                                <input type="checkbox" id="use-stun">
+                                <span class="form-check-label">STUN 服务器（网络穿透）</span>
+                            </label>
+                        </div>
+                        <div class="mt-3" id="settingsPanel" style="display:none;">
+                            <div class="form-group mb-0">
+                                <label class="form-label" for="videoSizeSlider">视频大小</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <input type="range" class="form-range flex-1" id="videoSizeSlider"
+                                           min="50" max="150" value="100">
+                                    <span id="videoSizeVal" class="text-mono fs-sm"
+                                          style="min-width:52px;text-align:right;">100%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧交互 -->
+        <div class="col-lg-4">
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="tab-nav" role="tablist" aria-label="交互模式">
+                        <button class="tab-btn active" data-tab="chat" role="tab" aria-selected="true"
+                                aria-controls="tab-chat">
+                            <i class="bi bi-chat-dots"></i> 对话模式
+                        </button>
+                        <button class="tab-btn" data-tab="tts" role="tab" aria-selected="false"
+                                aria-controls="tab-tts">
+                            <i class="bi bi-volume-up"></i> 朗读模式
+                        </button>
+                    </div>
+                    <button class="btn btn-ghost btn-sm ms-auto" id="btnExportChat"
+                            aria-label="导出聊天记录" title="导出聊天记录">
+                        <i class="bi bi-download"></i>
+                    </button>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <!-- 对话模式 -->
+                    <div class="tab-panel active" id="tab-chat" role="tabpanel">
+                        <div class="chat-container" id="chatMessages">
+                            <div class="empty-state compact" id="chatEmpty">
+                                <i class="bi bi-chat-square-text empty-state-icon"></i>
+                                <h4>暂无对话</h4>
+                                <p>连接数字人后，输入文字或按住麦克风说话即可开始对话。</p>
+                            </div>
+                        </div>
+                        <form id="chatForm" class="mt-3">
+                            <div class="input-group">
+                                <label class="sr-only" for="chatMessage">要发送的文字</label>
+                                <textarea class="form-control" id="chatMessage" rows="2"
+                                          placeholder="输入你想说的话…"></textarea>
+                                <button class="btn btn-primary" type="submit"
+                                        aria-label="发送" title="发送（Ctrl + Enter）">
+                                    <i class="bi bi-send"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2 fs-xs text-muted">
+                                <span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> 发送
+                            </div>
+                        </form>
+                        <div class="voice-record-wrap">
+                            <button type="button" class="voice-record-btn" id="voiceRecordBtn"
+                                    aria-label="按住说话" title="按住说话，松开发送">
+                                <i class="bi bi-mic-fill"></i>
+                            </button>
+                            <div class="voice-record-label" id="voiceLabel">按住说话，松开发送</div>
+                        </div>
+                    </div>
+
+                    <!-- 朗读模式 -->
+                    <div class="tab-panel" id="tab-tts" role="tabpanel">
+                        <form id="echoForm" class="d-flex flex-column flex-1">
+                            <div class="form-group">
+                                <label class="form-label" for="echoMessage">朗读内容</label>
+                                <textarea class="form-control" id="echoMessage" rows="6"
+                                          placeholder="输入想让数字人朗读的文字…"></textarea>
+                            </div>
+                            <div class="chip-group">
+                                <button type="button" class="chip"
+                                        data-text="欢迎来到直播间，感谢大家的关注！">欢迎语</button>
+                                <button type="button" class="chip"
+                                        data-text="感谢关注，方便的话点个赞支持一下～">感谢关注</button>
+                                <button type="button" class="chip"
+                                        data-text="下面为大家介绍今天的产品。">开始介绍</button>
+                                <button type="button" class="chip"
+                                        data-text="今天的直播就到这里，我们下次再见！">结束语</button>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mt-3">
+                                <i class="bi bi-volume-up"></i> 朗读文本
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 隐藏的会话ID -->
+<input type="hidden" id="sessionid" value="0">
+
+<!-- client.js 依赖的隐藏节点：本页历史上缺失，start() 会在
+     document.getElementById('start').style 处抛错并中断连接流程（已在浏览器里实测复现）。
+     这里补齐但保持不可见 —— client.js 会写 style.display，用内联 !important 压住。 -->
+<button type="button" id="start" hidden aria-hidden="true" tabindex="-1"
+        style="display:none !important;"></button>
+<button type="button" id="stop" hidden aria-hidden="true" tabindex="-1"
+        style="display:none !important;"></button>
+<audio id="audio" style="display:none;"></audio>
+
+<script src="common.js"></script>
+<script src="client.js"></script>
+<script src="srs.sdk.js"></script>
+<script>
+// ── 初始化 ──────────────────────────────────
+LT.Nav.current = 'dashboard';
+LT.Nav.inject('#lt-nav-container');
+
+// ── 标签页切换 ──────────────────────────────
+document.querySelectorAll('.tab-nav button').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.tab-nav button').forEach(b => {
+            b.classList.remove('active');
+            b.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    };
+});
+
+// ── 设置面板 ────────────────────────────────
+const settingsToggle = document.getElementById('settingsToggle');
+settingsToggle.onclick = () => {
+    const panel = document.getElementById('settingsPanel');
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    settingsToggle.setAttribute('aria-expanded', String(open));
+};
+
+document.getElementById('videoSizeSlider').oninput = function() {
+    document.getElementById('videoSizeVal').textContent = this.value + '%';
+    document.getElementById('video').style.width = this.value + '%';
+};
+
+// ── 连接 / 录制状态机 ───────────────────────
+let isConnected = false;      // 是否已连接数字人
+let isRecording = false;      // 是否正在录制（服务器端录制）
+let qualityWatched = false;   // ConnMonitor 是否已挂到当前 pc
+
+/** 录制按钮互斥：未连接时两个都禁用；连接后按录制状态二选一 */
+function syncRecButtons() {
+    const startBtn = document.getElementById('btnStartRec');
+    const stopBtn = document.getElementById('btnStopRec');
+    if (!startBtn || !stopBtn) return;
+    const sid = document.getElementById('sessionid').value;
+    const live = isConnected && sid !== '0';
+    startBtn.disabled = !live || isRecording;
+    stopBtn.disabled = !live || !isRecording;
+}
+
+// ── 状态更新 ────────────────────────────────
+function updateStatus(connected) {
+    isConnected = !!connected;
+    if (!isConnected) {
+        isRecording = false;
+        LT.ConnMonitor.stop();
+        qualityWatched = false;
+    }
+    const statusText = document.getElementById('status-text');
+    if (statusText) statusText.textContent = connected ? '已连接' : '未连接';
+    const badge = document.getElementById('videoStatusBadge');
+    if (badge) {
+        badge.className = connected ? 'badge-status badge-speaking' : 'badge-status badge-silent';
+        badge.title = connected ? '数字人会话已连接' : '尚未连接数字人';
+    }
+    LT.Nav.updateStatus(connected);
+    const empty = document.getElementById('videoEmpty');
+    if (empty) empty.style.display = connected ? 'none' : 'flex';
+    const recIndicator = document.getElementById('rec-indicator');
+    if (recIndicator) recIndicator.classList.toggle('active', isRecording);
+    syncRecButtons();
+}
+
+// ── 聊天消息 ────────────────────────────────
+function addChatMessage(message, type) {
+    const container = document.getElementById('chatMessages');
+    const empty = document.getElementById('chatEmpty');
+    if (empty) empty.remove();   // 有真实消息后收起空状态
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${type}`;
+    bubble.innerHTML = `
+        <div class="sender">${type === 'user' ? '您' : '数字人'}</div>
+        ${LT.Utils.escape(message)}
+    `;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+}
+
+// ── 按钮事件 ────────────────────────────────
+const btnConnect = document.getElementById('btnConnect');
+const btnDisconnect = document.getElementById('btnDisconnect');
+const originalStart = window.start;
+const originalStop = window.stop;
+
+// 重写 start/stop (client.js 中的函数)
+window.start = function() {
+    LT.Loading.button(btnConnect, true);
+    try {
+        originalStart();
+        updateStatus(true);
+        LT.Toast.success('已连接', '数字人会话已建立');
+    } catch(e) {
+        LT.Toast.error('连接失败', e.message);
+    }
+    LT.Loading.button(btnConnect, false);
+    btnConnect.style.display = 'none';
+    btnDisconnect.style.display = 'inline-flex';
+};
+
+window.stop = function() {
+    LT.Reconnect.stop();
+    originalStop();
+    updateStatus(false);
+    LT.Sync.broadcastStatus(false, null);
+    btnConnect.style.display = 'inline-flex';
+    btnDisconnect.style.display = 'none';
+    LT.Toast.info('已断开');
+};
+
+document.getElementById('btnConnect').onclick = () => window.start();
+document.getElementById('btnDisconnect').onclick = () => window.stop();
+
+// ── 录制 ────────────────────────────────────
+document.getElementById('btnStartRec').onclick = () => {
+    const sid = document.getElementById('sessionid').value;
+    if (sid === '0') return LT.Toast.warning('请先连接数字人');
+    if (isRecording) return;
+    LT.Api.post('/record', { type: 'start_record', sessionid: String(sid) })
+        .then(() => {
+            isRecording = true;
+            document.getElementById('rec-indicator').classList.add('active');
+            syncRecButtons();
+            LT.Toast.info('录制中', '正在录制数字人画面');
+        })
+        .catch(() => syncRecButtons());
+};
+
+document.getElementById('btnStopRec').onclick = () => {
+    const sid = document.getElementById('sessionid').value;
+    if (!isRecording) return;
+    LT.Api.post('/record', { type: 'end_record', sessionid: String(sid) })
+        .then(() => {
+            isRecording = false;
+            document.getElementById('rec-indicator').classList.remove('active');
+            syncRecButtons();
+            LT.Toast.success('录制完成', '可以下载录像文件');
+        })
+        .catch(() => syncRecButtons());
+};
+
+// ── 朗读模式 ────────────────────────────────
+document.getElementById('echoForm').onsubmit = function(e) {
+    e.preventDefault();
+    var msg = document.getElementById('echoMessage').value.trim();
+    if (!msg) return LT.Toast.warning('请输入文本');
+    var sid = document.getElementById('sessionid').value;
+    if (sid === '0') return LT.Toast.warning('请先连接数字人');
+
+    LT.Api.post('/human', {
+        text: msg, type: 'echo', interrupt: true, sessionid: String(sid)
+    }).then(() => {
+        document.getElementById('echoMessage').value = '';
+        addChatMessage(`已发送朗读: "${msg}"`, 'system');
+        LT.Toast.success('已发送', '正在朗读');
+    });
+};
+
+// 朗读快捷词：点击填入输入框，不自动发送
+document.querySelectorAll('#tab-tts .chip[data-text]').forEach(chip => {
+    chip.onclick = () => {
+        const box = document.getElementById('echoMessage');
+        box.value = chip.dataset.text;
+        box.focus();
+    };
+});
+
+// ── 聊天模式 ────────────────────────────────
+document.getElementById('chatForm').onsubmit = function(e) {
+    e.preventDefault();
+    var msg = document.getElementById('chatMessage').value.trim();
+    if (!msg) return;
+    var sid = document.getElementById('sessionid').value;
+    if (sid === '0') return LT.Toast.warning('请先连接数字人');
+
+    LT.Api.post('/human', {
+        text: msg, type: 'chat', interrupt: true, sessionid: String(sid)
+    }).then(() => {
+        addChatMessage(msg, 'user');
+        document.getElementById('chatMessage').value = '';
+    });
+};
+
+// ── 语音录制 ────────────────────────────────
+let mediaRecorder;
+let audioChunks = [];
+let isRecordingVoice = false;
+let recognition;
+const isSpeechSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+
+if (isSpeechSupported) {
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'zh-CN';
+
+    recognition.onresult = function(event) {
+        let final = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) final += event.results[i][0].transcript;
+            else document.getElementById('chatMessage').value = event.results[i][0].transcript;
+        }
+        if (final) document.getElementById('chatMessage').value = final;
+    };
+    recognition.onerror = e => console.error('语音识别错误:', e.error);
+}
+
+const voiceBtn = document.getElementById('voiceRecordBtn');
+const voiceLabel = document.getElementById('voiceLabel');
+
+voiceBtn.addEventListener('mousedown', startRecording);
+voiceBtn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+voiceBtn.addEventListener('mouseup', stopRecording);
+voiceBtn.addEventListener('mouseleave', stopRecording);
+voiceBtn.addEventListener('touchend', stopRecording);
+
+function startRecording() {
+    if (isRecordingVoice) return;
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.start();
+            isRecordingVoice = true;
+            voiceBtn.classList.add('recording');
+            voiceLabel.textContent = '正在聆听...';
+            voiceLabel.classList.add('recording');
+            if (recognition) recognition.start();
+        })
+        .catch(err => LT.Toast.error('无法访问麦克风', '请检查浏览器权限设置'));
+}
+
+function stopRecording() {
+    if (!isRecordingVoice) return;
+    mediaRecorder.stop();
+    isRecordingVoice = false;
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    voiceBtn.classList.remove('recording');
+    voiceLabel.textContent = '按住说话，松开发送';
+    voiceLabel.classList.remove('recording');
+    if (recognition) recognition.stop();
+
+    setTimeout(() => {
+        const text = document.getElementById('chatMessage').value.trim();
+        if (text) {
+            var sid = document.getElementById('sessionid').value;
+            if (sid !== '0') {
+                LT.Api.post('/human', {
+                    text, type: 'chat', interrupt: true, sessionid: String(sid)
+                });
+                addChatMessage(text, 'user');
+            }
+            document.getElementById('chatMessage').value = '';
+        }
+    }, 500);
+}
+
+// ── 键盘快捷键 ──────────────────────────────
+LT.Keys.bind('ctrl+enter', () => {
+    document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+}, '发送聊天消息');
+LT.Keys.bind('ctrl+shift+k', () => {
+    const list = LT.Keys.list().map(k => `${k.combo}: ${k.description}`).join('\n');
+    LT.Toast.info('快捷键', list, 6000);
+}, '显示快捷键帮助');
+
+// ── 浏览器通知 ────────────────────────────────
+LT.Notify.request();
+
+// ── 跨标签页状态同步 ────────────────────────
+LT.Sync.on('connection', (data) => {
+    LT.Nav.updateStatus(data.connected);
+    if (data.sessionId) LT.Nav.updateSessionId(data.sessionId);
+});
+
+// ── 自动重连 ────────────────────────────────
+// 监控client.js中pc的状态
+setInterval(() => {
+    if (typeof pc !== 'undefined' && pc && pc.connectionState === 'failed') {
+        updateStatus(false);
+        LT.Reconnect.start(() => {
+            stop(); start();
+            return Promise.resolve(true);
+        }, { maxAttempts: 3, baseDelay: 3000 });
+    }
+    if (typeof pc !== 'undefined' && pc && pc.connectionState === 'connected') {
+        LT.Reconnect.reset();
+        LT.Sync.broadcastStatus(true, document.getElementById('sessionid').value);
+        if (!isConnected) updateStatus(true);
+        if (!qualityWatched) {
+            qualityWatched = true;
+            LT.ConnMonitor.watch(pc, () => { if (!isConnected) updateStatus(true); });
+        }
+    }
+}, 5000);
+
+// ── 说话可视化 ────────────────────────────────
+// 容器放在本页视频卡头部：往 #lt-nav-status 里注可视化条会撑破导航状态胶囊
+// （胶囊 padding / align-items 被 .audio-viz 覆盖，圆点错位、文字被挤）
+LT.Speaking.createVisualizer('#speakingViz', 6);
+
+// 定期检查说话状态并更新可视化
+let lastSessionId = document.getElementById('sessionid').value;
+setInterval(() => {
+    const sid = document.getElementById('sessionid').value;
+    if (sid !== lastSessionId) {   // 会话建立/断开后立刻刷新录制按钮
+        lastSessionId = sid;
+        syncRecButtons();
+    }
+    if (sid !== '0') {
+        fetch('/is_speaking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionid: String(sid) }),
+        }).then(r => r.json()).then(d => {
+            const speaking = d.data && d.data.is_speaking;
+            LT.Speaking.updateVisualizer(speaking ? 0.7 : 0);
+            const statusEl = document.getElementById('lt-nav-status');
+            if (statusEl && speaking) statusEl.classList.add('speaking-pulse');
+            else if (statusEl) statusEl.classList.remove('speaking-pulse');
+        }).catch(() => {});
+    }
+}, 1500);
+
+// ── 页面过渡动画 ──────────────────────────────
+document.querySelector('.dashboard-container').classList.add('page-transition');
+
+// ── 导出聊天记录 ──────────────────────────────
+document.getElementById('btnExportChat').onclick = () => {
+    const bubbles = document.querySelectorAll('#chatMessages .chat-bubble');
+    if (!bubbles.length) return LT.Toast.warning('暂无聊天记录');
+    const lines = [];
+    bubbles.forEach(b => {
+        const sender = b.querySelector('.sender')?.textContent || '?';
+        const text = b.textContent.replace(sender, '').trim();
+        lines.push(`[${sender}] ${text}`);
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `livetalking-chat-${new Date().toISOString().slice(0,10)}.txt`;
+    a.click(); URL.revokeObjectURL(url);
+    LT.Toast.success('已导出', '聊天记录已保存为文本文件');
+};
+
+// 首屏同步一次录制按钮的禁用状态
+syncRecButtons();
+</script>
+</body>
+</html>

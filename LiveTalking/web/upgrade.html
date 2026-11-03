@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>升级会员 - AI 数字人直播工作台</title>
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script src="/common.js"></script>
+  <script src="/auth.js"></script>
+  <style>
+    /* 本页只补 v3 设计系统没有的部分，颜色 / 间距 / 圆角全部走 CSS 变量 */
+    .upgrade-page { padding-bottom: 56px; }
+    .upgrade-page .card { margin-bottom: 18px; }
+    .upgrade-page [hidden] { display: none !important; }
+    .message { min-height: 20px; margin: 10px 0 8px; }
+    .message .alert { margin-bottom: 0; }
+
+    .alert-stack { display: grid; gap: 10px; margin-top: 14px; }
+    .alert-stack:empty { display: none; }
+
+    .fact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+      gap: 10px 14px;
+    }
+    .fact {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      background: var(--surface-sunken);
+    }
+    .fact > span { display: block; font-size: 12px; color: var(--text-secondary); }
+    .fact > strong { display: block; margin-top: 2px; font-size: 15px; font-weight: 660; overflow-wrap: anywhere; }
+
+    .upgrade-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+    .upgrade-grid > .card { margin-bottom: 0; }
+
+    .code-input { text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .pay-facts { display: grid; gap: 10px; margin-bottom: 14px; }
+    .pay-facts > div { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; line-height: 1.65; }
+    .pay-facts > div > span { flex: 0 0 72px; color: var(--text-secondary); }
+    .pay-facts > div > strong { flex: 1; min-width: 0; font-weight: 600; white-space: pre-line; overflow-wrap: anywhere; }
+
+    .qr-box {
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: var(--space-3);
+      background: var(--surface-sunken);
+      text-align: center;
+    }
+    .pay-qr-img { max-width: 100%; width: 208px; height: auto; border-radius: var(--radius-sm); display: block; margin: 0 auto; }
+    .qr-caption { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+    .qr-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 18px 12px;
+      color: var(--text-secondary);
+    }
+    .qr-placeholder i { font-size: 30px; color: var(--text-muted); }
+    .qr-placeholder p { margin: 0; font-size: 12.5px; line-height: 1.65; }
+
+    .plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .plan-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 16px 16px;
+      background: var(--card-bg);
+    }
+    .plan-card.is-pro {
+      border: 2px solid var(--primary);
+      background: linear-gradient(180deg, var(--primary-light), var(--card-bg) 58%);
+      box-shadow: 0 10px 28px rgba(79, 70, 229, 0.14);
+    }
+    .plan-chip {
+      position: absolute;
+      top: -11px;
+      right: 14px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      background: var(--primary);
+      color: #fff;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .plan-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .plan-name { font-size: 16px; font-weight: 680; }
+    .plan-price { font-size: 14px; font-weight: 680; color: var(--primary); }
+    .plan-summary { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.65; }
+    .plan-bullets { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+    .plan-bullets li { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.6; }
+    .plan-bullets li i { margin-top: 2px; color: var(--success); }
+    .plan-card.is-pro .plan-bullets li i { color: var(--primary); }
+    .plan-current {
+      margin-top: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 660;
+      color: var(--primary);
+    }
+
+    .unlock-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px 16px; }
+    .unlock-list li { display: flex; gap: 8px; align-items: center; font-size: 13px; line-height: 1.6; }
+    .unlock-list li i { color: var(--text-muted); }
+    .unlock-list li.is-on i { color: var(--success); }
+
+    .unlock-banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin: 0 0 18px;
+      padding: 14px 18px;
+      border: 1px solid var(--primary-border);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-sm);
+      background: var(--primary-light);
+    }
+    .unlock-banner.is-done {
+      border-color: var(--success-bg);
+      border-left-color: var(--success);
+      background: var(--success-bg);
+    }
+    .unlock-banner b { display: block; font-size: 14px; }
+    .unlock-banner .hint { margin: 2px 0 0; }
+    .unlock-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+    @media (max-width: 992px) {
+      .upgrade-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 720px) {
+      .plan-grid { grid-template-columns: minmax(0, 1fr); }
+      .unlock-actions { margin-left: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <nav id="lt-nav-container"></nav>
+  <main class="container upgrade-page">
+    <div class="page-heading">
+      <div>
+        <h1 class="page-title"><i class="bi bi-gem"></i>升级会员 / 兑换激活码</h1>
+        <p class="page-subtitle">输入管理员发放的激活码，立即解锁专业版全部直播功能</p>
+      </div>
+      <div class="actions"></div>
+    </div>
+
+    <div id="authBannerHost"></div>
+    <div id="unlockHost"></div>
+
+    <!-- ── 当前状态 ────────────────────────────────────── -->
+    <section class="card">
+      <div class="card-header"><i class="bi bi-person-badge"></i>当前状态</div>
+      <div class="card-body">
+        <div id="statusCardBody"><div class="hint">正在读取账号状态…</div></div>
+        <div id="statusAlerts" class="alert-stack"></div>
+      </div>
+    </section>
+
+    <!-- ── 兑换 + 购买方式 ─────────────────────────────── -->
+    <div class="upgrade-grid">
+      <section class="card">
+        <div class="card-header"><i class="bi bi-key"></i>兑换激活码</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="codeInput">激活码</label>
+            <input class="form-control text-mono code-input" id="codeInput" type="text"
+                   placeholder="AILIVE-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"
+                   maxlength="40" aria-describedby="codeHint">
+            <div class="form-hint" id="codeHint">不区分大小写，可以不带短横线直接粘贴，系统会自动规整。</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" type="button" id="redeemButton">
+              <i class="bi bi-unlock"></i>立即兑换
+            </button>
+          </div>
+          <div id="redeemMessage" class="message" role="status" aria-live="polite"></div>
+          <p class="hint">激活码由管理员生成，一码一用，请勿泄露。</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header"><i class="bi bi-cart-check"></i>购买方式</div>
+        <div class="card-body">
+          <div class="pay-facts">
+            <div><span>联系方式</span><strong id="contactText">—</strong></div>
+            <div><span>购买说明</span><strong id="purchaseNote">—</strong></div>
+          </div>
+          <div class="qr-box">
+            <div id="qrSlot">
+              <img src="/pay_qr.png" alt="收款二维码" class="pay-qr-img"
+                   onerror="window.__ltQrFallback &amp;&amp; window.__ltQrFallback()">
+            </div>
+            <div class="qr-caption">扫码付款后联系客服领取激活码</div>
+          </div>
+          <div id="daysHint" class="hint"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ── 套餐对比 ────────────────────────────────────── -->
+    <section class="card">
+      <div class="card-header"><i class="bi bi-columns-gap"></i>免费版 vs 专业版</div>
+      <div class="card-body">
+        <div id="planGrid" class="plan-grid">
+          <div class="hint">正在读取套餐信息…</div>
+        </div>
+        <p class="hint" style="margin-top:14px">
+          <i class="bi bi-info-circle"></i>
+          专业版为按天授权的期限套餐，到期后自动回落为免费版，需重新兑换激活码才能恢复全部功能。
+        </p>
+      </div>
+    </section>
+
+    <!-- ── 解锁后能用什么 ──────────────────────────────── -->
+    <section class="card">
+      <div class="card-header"><i class="bi bi-stars"></i>解锁后能用什么</div>
+      <div class="card-body">
+        <div id="featureList" class="unlock-list-host">
+          <div class="hint">正在读取功能清单…</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    LT.Nav.current = '';
+    LT.Nav.inject('#lt-nav-container');
+
+    const $ = (sel, root) => (root || document).querySelector(sel);
+
+    /* ── 页面参数 ─────────────────────────────────────── */
+    const params = new URLSearchParams(window.location.search);
+    const featureKey = String(params.get('feature') || '').trim();
+
+    // 只接受站内绝对路径，拒绝 //evil.com 与 http(s):// 之类的外跳地址
+    function safeNext(raw) {
+      const value = String(raw || '').trim();
+      if (!value || value.charAt(0) !== '/') return '';
+      if (value.charAt(1) === '/') return '';
+      return value;
+    }
+    const nextPath = safeNext(params.get('next'));
+
+    let redeemed = false;
+
+    /* ── 小工具 ───────────────────────────────────────── */
+    function esc(text) {
+      return LT.Utils.escape(text === undefined || text === null ? '' : String(text));
+    }
+
+    function dateOnly(value) {
+      const text = String(value || '');
+      return text ? text.slice(0, 10) : '';
+    }
+
+    function planLabelOf(key) {
+      const plan = (Auth.state.plans || {})[key];
+      if (plan && plan.label) return plan.label;
+      return key === 'pro' ? '专业版' : (key === 'free' ? '免费版' : '管理员');
+    }
+
+    function currentPlanKey() {
+      const user = Auth.state.user;
+      if (!user) return '';
+      if (user.is_admin) return 'admin';
+      if (user.plan_expired) return 'free';
+      return user.plan || 'free';
+    }
+
+    /* ── 当前状态 ─────────────────────────────────────── */
+    function describeDays(user) {
+      if (user.is_admin) return '不限';
+      const days = user.plan_days_left;
+      if (user.plan_expired) return '已过期';
+      if (days === null || days === undefined) return user.is_paid ? '不限' : '未开通';
+      return days + ' 天';
+    }
+
+    function renderStatus(user) {
+      const body = $('#statusCardBody');
+      const alertsHost = $('#statusAlerts');
+      alertsHost.innerHTML = '';
+
+      if (!Auth.state.auth_enabled) {
+        body.innerHTML = '<div class="hint">当前服务器未启用登录与会员校验，全部功能可直接使用，无需兑换激活码。</div>';
+        return;
+      }
+
+      const view = user || Auth.state.user;
+      if (!view) {
+        body.innerHTML = '<div class="hint">正在读取账号状态…</div>';
+        return;
+      }
+
+      const isAdmin = !!view.is_admin;
+      const expired = !!view.plan_expired;
+      const paid = Auth.isPaid() || !!view.is_paid;
+      const expires = dateOnly(view.plan_expires_at);
+      const displayName = view.display_name || view.username || '';
+
+      const facts = [
+        ['用户名', esc(displayName) + (view.username && displayName !== view.username ? '（' + esc(view.username) + '）' : '')],
+        ['当前套餐', esc(view.plan_label || '免费版')],
+        ['到期时间', esc(expires || (isAdmin ? '不限' : '—'))],
+        ['剩余天数', esc(describeDays(view))],
+      ];
+      body.innerHTML = '<div class="fact-grid">' + facts.map(([label, value]) =>
+        '<div class="fact"><span>' + label + '</span><strong>' + value + '</strong></div>'
+      ).join('') + '</div>';
+
+      const alerts = [];
+      if (isAdmin) {
+        alerts.push(['info', 'bi-shield-check', '管理员已拥有全部功能',
+          '管理员帐号默认包含专业版的全部能力，无需兑换；下面的兑换表单仍然可用，方便你测试激活码。']);
+      }
+      if (expired) {
+        alerts.push(['warning', 'bi-exclamation-triangle', '专业版已到期',
+          '专业版已于 ' + (expires || '到期日') + ' 到期，帐号已回落为免费版（只能查看工作台与试听）。重新兑换激活码即可恢复全部功能。']);
+      } else if (paid && !isAdmin) {
+        alerts.push(['info', 'bi-arrow-repeat', '续费说明',
+          '你当前是专业版' + (expires ? '（到期时间 ' + expires + '）' : '') +
+          '。再次兑换激活码会在现有到期时间上叠加天数，已剩余的天数不会清零。']);
+      } else if (!paid && !isAdmin) {
+        alerts.push(['info', 'bi-gem', '当前为免费版',
+          '兑换激活码后立即解锁专业版全部直播功能；到期后会自动回落为免费版，需重新兑换。']);
+      }
+
+      alertsHost.innerHTML = alerts.map(([kind, icon, title, text]) =>
+        '<div class="alert alert-' + kind + '">' +
+          '<i class="bi ' + icon + '"></i>' +
+          '<div class="alert-body"><div class="alert-title">' + esc(title) + '</div>' + esc(text) + '</div>' +
+        '</div>'
+      ).join('');
+    }
+
+    /* ── feature / next 横幅 ─────────────────────────── */
+    function refreshNextButton() {
+      const button = $('#nextButton');
+      if (!button) return;
+      const allowed = redeemed || Auth.isPaid() || (featureKey ? Auth.can(featureKey) : false);
+      if (!allowed) return;
+      button.hidden = false;
+      button.classList.remove('btn-outline');
+      button.classList.add('btn-primary');
+    }
+
+    function renderFeatureBanner() {
+      const host = $('#unlockHost');
+      if (!host) return;
+      if (!featureKey && !nextPath) { host.innerHTML = ''; return; }
+
+      const unlocked = featureKey ? Auth.can(featureKey) : false;
+      let head = '';
+      if (featureKey) {
+        const meta = (Auth.state.features || {})[featureKey] || {};
+        const label = meta.label || Auth.featureLabel(featureKey);
+        const planLabel = planLabelOf(meta.plan || 'pro');
+        head = unlocked
+          ? '<b><i class="bi bi-unlock-fill"></i> 你已解锁：' + esc(label) + '</b>' +
+            '<p class="hint">该功能属于' + esc(planLabel) + '，当前帐号已可使用，无需重复兑换。</p>'
+          : '<b><i class="bi bi-gem"></i> 你正在解锁：' + esc(label) + '</b>' +
+            '<p class="hint">该功能需要' + esc(planLabel) + '，在下方输入激活码即可立即开通。</p>';
+      } else {
+        head = '<b><i class="bi bi-arrow-return-left"></i> 返回之前的页面</b>' +
+          '<p class="hint">兑换成功后可以直接返回刚才的页面继续操作。</p>';
+      }
+
+      const actions = nextPath
+        ? '<div class="unlock-actions"><button class="btn btn-outline btn-sm" type="button" id="nextButton" hidden>' +
+          '<i class="bi bi-arrow-return-left"></i> 返回工作台</button></div>'
+        : '';
+
+      host.innerHTML = '<div class="unlock-banner' + (unlocked ? ' is-done' : '') + '">' + head + actions + '</div>';
+
+      const button = $('#nextButton');
+      if (button) {
+        button.addEventListener('click', () => { window.location.href = nextPath; });
+      }
+      refreshNextButton();
+    }
+
+    /* ── 套餐对比 ─────────────────────────────────────── */
+    function renderPlans() {
+      const host = $('#planGrid');
+      const plans = Auth.state.plans || {};
+      let keys = ['free', 'pro'].filter((key) => plans[key]);
+      if (!keys.length) keys = Object.keys(plans);
+      if (!keys.length) {
+        host.innerHTML = '<div class="hint">套餐信息暂时不可用，请刷新页面重试。</div>';
+        return;
+      }
+
+      const current = currentPlanKey();
+      host.innerHTML = keys.map((key) => {
+        const plan = plans[key] || {};
+        const isPro = key === 'pro';
+        const bullets = Array.isArray(plan.bullets) ? plan.bullets : [];
+        return '<article class="plan-card' + (isPro ? ' is-pro' : '') + '">' +
+          (isPro ? '<span class="plan-chip">推荐</span>' : '') +
+          '<div class="plan-head">' +
+            '<div class="plan-name">' + esc(plan.label || key) + '</div>' +
+            '<div class="plan-price">' + esc(plan.price || '') + '</div>' +
+          '</div>' +
+          '<p class="plan-summary">' + esc(plan.summary || '') + '</p>' +
+          '<ul class="plan-bullets">' + bullets.map((item) =>
+            '<li><i class="bi bi-check2"></i><span>' + esc(item) + '</span></li>'
+          ).join('') + '</ul>' +
+          (current === key ? '<div class="plan-current"><i class="bi bi-person-check"></i>当前套餐</div>' : '') +
+        '</article>';
+      }).join('');
+    }
+
+    /* ── 解锁后能用什么 ──────────────────────────────── */
+    const FALLBACK_FEATURES = [
+      '连接数字人 / 输出画面', '一键开播', '自动话术与氛围互动', '直播录制',
+      '字幕自动回应', '商品与佣金管理', '人工播报', '达人账号管理',
+    ];
+
+    function renderFeatures() {
+      const host = $('#featureList');
+      const features = Auth.state.features || {};
+      const keys = Object.keys(features).filter((key) => (features[key] || {}).plan === 'pro');
+
+      if (!keys.length) {
+        host.innerHTML = '<ul class="unlock-list">' + FALLBACK_FEATURES.map((label) =>
+          '<li class="is-on"><i class="bi bi-check-circle-fill"></i><span>' + esc(label) + '</span></li>'
+        ).join('') + '</ul>';
+        return;
+      }
+
+      host.innerHTML = '<ul class="unlock-list">' + keys.map((key) => {
+        const label = (features[key] || {}).label || key;
+        const on = Auth.can(key);
+        return '<li class="' + (on ? 'is-on' : '') + '">' +
+          '<i class="bi ' + (on ? 'bi-check-circle-fill' : 'bi-lock') + '"></i>' +
+          '<span>' + esc(label) + '</span></li>';
+      }).join('') + '</ul>';
+    }
+
+    /* ── 购买方式 ─────────────────────────────────────── */
+    function renderConfig() {
+      const config = Auth.state.config || {};
+      $('#contactText').textContent = config.contact || '请联系管理员获取购买方式';
+      $('#purchaseNote').textContent = config.purchase_note || '付款后由管理员发放激活码，在本页输入即可解锁专业版。';
+      const days = config.pro_days_default;
+      $('#daysHint').textContent = days ? '默认开通时长 ' + days + ' 天，实际天数以激活码为准。' : '';
+    }
+
+    // 二维码缺失时替换成说明面板，绝不显示破图图标
+    window.__ltQrFallback = function () {
+      const slot = $('#qrSlot');
+      if (!slot || slot.dataset.fallback === '1') return;
+      slot.dataset.fallback = '1';
+      slot.innerHTML = '<div class="qr-placeholder">' +
+        '<i class="bi bi-qr-code"></i>' +
+        '<p>管理员可在 web/pay_qr.png 放置收款二维码（当前未配置）</p>' +
+        '</div>';
+    };
+
+    /* ── 兑换 ─────────────────────────────────────────── */
+    function showResult(text, ok) {
+      const box = $('#redeemMessage');
+      if (!text) { box.innerHTML = ''; return; }
+      box.innerHTML = '<div class="alert ' + (ok ? 'alert-success' : 'alert-danger') + '">' +
+        '<i class="bi ' + (ok ? 'bi-check-circle' : 'bi-exclamation-triangle') + '"></i>' +
+        '<div class="alert-body">' + esc(text) + '</div></div>';
+    }
+
+    async function doRedeem() {
+      const input = $('#codeInput');
+      const button = $('#redeemButton');
+      const raw = String(input.value || '').trim();
+
+      if (!raw) {
+        showResult('请输入激活码', false);
+        LT.Toast.error('无法兑换', '请输入激活码');
+        input.focus();
+        return;
+      }
+
+      showResult('');
+      LT.Loading.button(button, true);
+      try {
+        const data = await Auth.redeem(raw);
+        redeemed = true;
+
+        // 用兑换返回的 user / entitlements 立即刷新页面状态
+        if (data && data.user) {
+          Auth.state.user = data.user;
+          Auth.state.loaded = true;
+        }
+        if (data && data.entitlements) Auth.state.entitlements = data.entitlements;
+
+        input.value = '';
+        const days = data && data.days ? data.days : 0;
+        const expires = dateOnly(data && data.plan_expires_at);
+        const summary = '兑换成功，已为帐号增加 ' + days + ' 天专业版' +
+          (expires ? '，到期时间 ' + expires : '') + '。';
+
+        showResult(summary, true);
+        LT.Toast.success('兑换成功', '已解锁 ' + days + ' 天专业版');
+        renderStatus(data && data.user);
+        renderFeatures();
+        renderFeatureBanner();
+
+        // 刷新顶部用户条与免费版提示条（Auth.mount 内部会重新读取 /api/auth/me）
+        Auth.mount({ into: '.page-heading .actions', bannerInto: '#authBannerHost' })
+          .then(() => {
+            renderStatus();
+            renderFeatures();
+            renderFeatureBanner();
+          })
+          .catch((error) => { console.warn('[upgrade] 刷新登录态失败', error); });
+      } catch (error) {
+        const text = (error && error.message) ? error.message : '兑换失败，请稍后重试';
+        showResult(text, false);
+        // Auth.request 对业务错误已经弹过 Toast，这里只补网络异常等未提示的情况
+        if (!(error && (error.code || error.payload))) LT.Toast.error('兑换失败', text);
+      } finally {
+        LT.Loading.button(button, false);
+      }
+    }
+
+    /* ── 初始化 ───────────────────────────────────────── */
+    $('#redeemButton').addEventListener('click', doRedeem);
+    $('#codeInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        doRedeem();
+      }
+    });
+
+    Auth.mount({ into: '.page-heading .actions', bannerInto: '#authBannerHost' })
+      .then(() => {
+        renderStatus();
+        renderPlans();
+        renderFeatures();
+        renderConfig();
+        renderFeatureBanner();
+      })
+      .catch((error) => {
+        showResult((error && error.message) ? error.message : '登录状态读取失败，请刷新页面重试', false);
+      })
+      .finally(() => {
+        // 兜底：图片在脚本执行前就已加载失败时，onerror 可能没赶上
+        const image = $('.pay-qr-img');
+        if (image && image.complete && image.naturalWidth === 0) window.__ltQrFallback();
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+[
+    {
+        "src":  "build_project_plan.py",
+        "dst":  "competition\\scripts\\build_project_plan.py",
+        "isDir":  false,
+        "length":  27590
+    },
+    {
+        "src":  "complete_registration.py",
+        "dst":  "competition\\scripts\\complete_registration.py",
+        "isDir":  false,
+        "length":  7375
+    },
+    {
+        "src":  "build_live_ecommerce_deck.js",
+        "dst":  "competition\\scripts\\build_live_ecommerce_deck.js",
+        "isDir":  false,
+        "length":  28157
+    },
+    {
+        "src":  "xlsx_inspect.mjs",
+        "dst":  "competition\\scripts\\xlsx_inspect.mjs",
+        "isDir":  false,
+        "length":  639
+    },
+    {
+        "src":  "revise_plan_docx.ps1",
+        "dst":  "competition\\scripts\\revise_plan_docx.ps1",
+        "isDir":  false,
+        "length":  4583
+    },
+    {
+        "src":  "update_registration_names.ps1",
+        "dst":  "competition\\scripts\\update_registration_names.ps1",
+        "isDir":  false,
+        "length":  2907
+    },
+    {
+        "src":  "render_pdf_pages.ps1",
+        "dst":  "competition\\scripts\\render_pdf_pages.ps1",
+        "isDir":  false,
+        "length":  3211
+    },
+    {
+        "src":  "plan_replacements.json",
+        "dst":  "competition\\data\\plan_replacements.json",
+        "isDir":  false,
+        "length":  3067
+    },
+    {
+        "src":  "plan_replacements_final.json",
+        "dst":  "competition\\data\\plan_replacements_final.json",
+        "isDir":  false,
+        "length":  3396
+    },
+    {
+        "src":  "registration_name_updates.json",
+        "dst":  "competition\\data\\registration_name_updates.json",
+        "isDir":  false,
+        "length":  1039
+    },
+    {
+        "src":  "docx_extract.txt",
+        "dst":  "competition\\extracts\\docx_extract.txt",
+        "isDir":  false,
+        "length":  1499
+    },
+    {
+        "src":  "docx3_extract.txt",
+        "dst":  "competition\\extracts\\docx3_extract.txt",
+        "isDir":  false,
+        "length":  1502
+    },
+    {
+        "src":  "team_extract.txt",
+        "dst":  "competition\\extracts\\team_extract.txt",
+        "isDir":  false,
+        "length":  429
+    },
+    {
+        "src":  "plan_text_check.txt",
+        "dst":  "competition\\extracts\\plan_text_check.txt",
+        "isDir":  false,
+        "length":  15054
+    },
+    {
+        "src":  "xlsx_inspect.txt",
+        "dst":  "competition\\extracts\\xlsx_inspect.txt",
+        "isDir":  false,
+        "length":  19632
+    },
+    {
+        "src":  "xlsx_styles.txt",
+        "dst":  "competition\\extracts\\xlsx_styles.txt",
+        "isDir":  false,
+        "length":  6356
+    },
+    {
+        "src":  "pptx_package",
+        "dst":  "competition\\build\\pptx_package",
+        "isDir":  true,
+        "length":  null
+    },
+    {
+        "src":  "AI达人带货直播完整教程.md",
+        "dst":  "docs\\AI达人带货直播完整教程.md",
+        "isDir":  false,
+        "length":  6708
+    },
+    {
+        "src":  "server.audio.stderr.log",
+        "dst":  "logs\\archive\\server.audio.stderr.log",
+        "isDir":  false,
+        "length":  1392
+    },
+    {
+        "src":  "server.audio.stdout.log",
+        "dst":  "logs\\archive\\server.audio.stdout.log",
+        "isDir":  false,
+        "length":  0
+    },
+    {
+        "src":  "server.codex.verify.stderr.log",
+        "dst":  "logs\\archive\\server.codex.verify.stderr.log",
+        "isDir":  false,
+        "length":  1677
+    },
+    {
+        "src":  "server.codex.verify.stdout.log",
+        "dst":  "logs\\archive\\server.codex.verify.stdout.log",
+        "isDir":  false,
+        "length":  0
+    },
+    {
+        "src":  "server.current.stderr.log",
+        "dst":  "logs\\archive\\server.current.stderr.log",
+        "isDir":  false,
+        "length":  14075
+    },
+    {
+        "src":  "server.current.stdout.log",
+        "dst":  "logs\\archive\\server.current.stdout.log",
+        "isDir":  false,
+        "length":  0
+    },
+    {
+        "src":  "server.final.stderr.log",
+        "dst":  "logs\\archive\\server.final.stderr.log",
+        "isDir":  false,
+        "length":  2093
+    },
+    {
+        "src":  "server.final.stdout.log",
+        "dst":  "logs\\archive\\server.final.stdout.log",
+        "isDir":  false,
+        "length":  0
+    },
+    {
+        "src":  "server.ocr.stderr.log",
+        "dst":  "logs\\archive\\server.ocr.stderr.log",
+        "isDir":  false,
+        "length":  2101
+    },
+    {
+        "src":  "server.ocr.stdout.log",
+        "dst":  "logs\\archive\\server.ocr.stdout.log",
+        "isDir":  false,
+        "length":  0
+    },
+    {
+        "src":  "server.stderr.log",
+        "dst":  "logs\\archive\\server.stderr.log",
+        "isDir":  false,
+        "length":  1726
+    },
+    {
+        "src":  "server.stdout.log",
+        "dst":  "logs\\archive\\server.stdout.log",
+        "isDir":  false,
+        "length":  0
+    },
+    {
+        "src":  "Miniconda3-latest-Windows-x86_64.exe",
+        "dst":  "archive\\installers\\Miniconda3-latest-Windows-x86_64.exe",
+        "isDir":  false,
+        "length":  130748344
+    },
+    {
+        "src":  "android-commandline-tools.zip",
+        "dst":  "archive\\installers\\android-commandline-tools.zip",
+        "isDir":  false,
+        "length":  153583359
+    },
+    {
+        "src":  "edge_tts_test.mp3",
+        "dst":  "tmp\\edge_tts_test.mp3",
+        "isDir":  false,
+        "length":  11952
+    },
+    {
+        "src":  "_smoke_intent.py",
+        "dst":  "tools\\smoke\\_smoke_intent.py",
+        "isDir":  false,
+        "length":  5391
+    },
+    {
+        "src":  "_smoke_tts_offline.py",
+        "dst":  "tools\\smoke\\_smoke_tts_offline.py",
+        "isDir":  false,
+        "length":  5539
+    }
+]

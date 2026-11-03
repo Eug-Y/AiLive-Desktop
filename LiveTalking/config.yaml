@@ -1,0 +1,30 @@
+###############################################################################
+#  LiveTalking Configuration
+#  CLI arguments override values in this file
+###############################################################################
+
+# -------- Audio ----------------------------------------------------------
+audio_chunk_size: 10          # 音频处理块大小（每帧采样数 = chunk_size * 32）
+audio_mel_channels: 8         # Mel 频谱通道数
+audio_sample_rate_khz: 10     # 重采样率 (kHz)
+
+# -------- Avatar Model ----------------------------------------------------------
+model: wav2lip                 # musetalk / wav2lip / ultralight
+avatar_id: wav2lip256_avatar1
+batch_size: 16
+
+# -------- Custom Actions ----------------------------------------------------------
+customvideo_config: ''
+
+# -------- TTS ----------------------------------------------------------
+tts: edgetts                   # edgetts / gpt-sovits / cosyvoice / fishtts / tencent / doubao / indextts2 / azuretts / qwentts
+REF_FILE: 'zh-CN-XiaoxiaoNeural'   # 全系统唯一音色来源：启动脚本与 TTS 缓存预热共用
+REF_TEXT: ''                   # reference text for voice cloning (English or Chinese)
+TTS_SERVER: ''                 # TTS server URL, no trailing slash
+
+# -------- Transport ----------------------------------------------------------
+transport: webrtc              # rtcpush / webrtc / rtmp / virtualcam
+stun: 'stun:stun.freeswitch.org:3478'  # stun server URL
+push_url: ''                   # push URL for rtcpush/rtmp (not needed for webrtc/virtualcam)
+max_session: 5                 # max concurrent sessions
+listenport: 8010

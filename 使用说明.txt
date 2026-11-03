@@ -1,0 +1,212 @@
+LiveTalking 已安装到 E:\AiLive
+
+使用方法：
+1. 双击“一键启动AI数字人.cmd”。
+2. 首次启动模型通常需要几十秒，请等到窗口出现 8010 服务地址。
+3. 启动脚本会自动打开直播工作台页面（http://127.0.0.1:8010/live_console.html）。
+4. 网页中点击“开始连接”。
+5. 在“文本驱动”中输入话术，类型选择“Echo 复读”，然后提交。
+
+桌面应用（真正的桌面程序，推荐日常使用）：
+1. 双击桌面上的「AI 数字人桌面版」，或双击本目录的“桌面版AI数字人.cmd”。
+2. 它和以前那版“像桌面的网页”不一样：是独立 exe、独立窗口与任务栏图标，界面是常规桌面软件样式
+   （左侧导航栏 + 顶部工具栏 + 多标签页 + 底部状态栏），14 个模块：控制中心、直播工作台、数字人画面、
+   开播 SOP、商品库、大模型、字幕、Yamy 2.5D 数字宠物、用户管理、虚拟摄像头、教程、日志诊断、设置、关于。
+3. 后端服务由应用自己托管：启动时 8010 没有服务就自己拉起（启动页显示真实进度：定位项目→检查服务→准备界面），
+   退出时把自己启动的服务停掉；如果服务是外部先开着的，应用只复用、退出时不会去动它。
+4. 内嵌页面型标签切走不销毁（切回不用重连，WebRTC 不掉线），关闭标签才释放；权限仍由服务端判定，
+   免费账号打开专业版页面会在窗口内看到服务端的拦截说明。
+5. 没装过 / 想重装：双击 E:\AiLive\app\installer\安装桌面版.cmd（装到用户目录，建桌面与开始菜单快捷方式，
+   控制面板里能卸载；不需要管理员权限）。卸载：开始菜单「卸载 AI 数字人桌面版」。
+6. 还没打包时：E:\AiLive\env\python.exe 无关，直接跑
+   powershell -ExecutionPolicy Bypass -File E:\AiLive\app\build_exe.ps1        （打包，约 32 秒）
+   powershell -ExecutionPolicy Bypass -File E:\AiLive\tools\启动桌面应用.ps1 -Build  （打包+安装+启动，一条命令）
+7. 没有 exe 也能看界面：
+   浏览器版（网页端）：http://127.0.0.1:8010/app.html（需要服务在运行、需要登录）
+   网页端只显示网页端该有的入口：退出应用、重启数字人服务、打开日志/项目文件夹、服务托管、
+   项目根目录这些“桌面专属”条目在浏览器里不显示（桌面应用里一个不少）。
+   完全离线：双击 E:\AiLive\desktop\AI数字人桌面界面（离线演示）.html（file:// 打开自动进入离线演示模式，
+   不调用任何接口、数据全部标注“演示”）；改完主版本后双击 desktop\同步桌面版副本.cmd 同步副本。
+8. 自检（都可复跑，输出 PASS/FAIL 与 x/y 通过）：
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_e2e_desktop_app.py --scenario external   真桌面应用 38 项
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_e2e_desktop_app.py --scenario managed    自托管服务 38 项
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_e2e_installer.py                        安装卸载 24 项
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_check_offline_demo.py                   离线演示 14 项（含与主版本逐字一致）
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_e2e_app_ui.py                           浏览器版界面 65 项（含端区分）
+9. 验收脚本会自己注册自检账号（e2e_app_qa 等），跑多了会留在系统里。清理（先停服务，默认只预览）：
+   E:\AiLive\env\python.exe E:\AiLive\tools\cleanup_e2e_accounts.py           预览
+   E:\AiLive\env\python.exe E:\AiLive\tools\cleanup_e2e_accounts.py --apply   真删（会先备份到 logs\archive\）
+   完整说明：E:\AiLive\docs\桌面应用（真桌面版）说明.md
+   旧版仿桌面界面（留档，不推荐）：E:\AiLive\docs\桌面版使用说明.md
+
+登录与会员（首次使用必读）：
+1. 打开工作台会先进入登录页。管理员账号原来默认是 admin / admin123456，本机已按你的要求改掉
+   （默认口令已失效）；密码规则是至少 8 位且必须同时包含字母和数字，纯数字会被拒绝。
+   忘记密码：双击“重置管理员密码.cmd”。
+2. 普通用户在登录页“注册”后即为免费版：可以看工作台、看商品库、做模拟评论测试，但不能连接数字人或开播。
+3. 免费用户点“升级会员”（http://127.0.0.1:8010/upgrade.html），输入管理员发来的激活码即可解锁专业版：
+   连接数字人、一键开播、自动话术、人工播报、录制、字幕自动回应、商品与佣金管理、备份导出。
+4. 管理员在工作台右上角“用户管理”（http://127.0.0.1:8010/admin_users.html）生成激活码、改套餐、重置密码、禁用账号。
+5. 安全操作不受套餐限制：安全下播、紧急停止、打断播报，免费用户也能随时止损。
+6. 导航里的“参赛项目”（含工作台“参赛与项目材料”卡片）只对管理员可见：普通用户看不到入口，
+   直接输网址也会被挡到无权限页 —— 页面与接口都由服务端按 competition.view 分级。
+7. 忘记管理员密码：双击“重置管理员密码.cmd”；也可以用命令行
+   E:\AiLive\env\python.exe -m server.auth_manager set-password admin 新密码（工作目录为 LiveTalking）。
+8. 完整说明：E:\AiLive\docs\登录与会员功能说明.md
+9. 实现与验收记录（改代码前先看一眼）：E:\AiLive\docs\登录与会员-验收记录.md
+10. 自检命令（服务运行中可跑真实浏览器验收；改过管理员密码要先传环境变量）：
+   $env:AILIVE_ADMIN_USER = "管理员用户名"; $env:AILIVE_ADMIN_PASSWORD = "密码"
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_smoke_auth.py          接口级 81 项
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_e2e_auth_ui.py         浏览器端到端 75 项
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_check_public_share.py  外网分享是否真的能看到 12 项
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_probe_webrtc_ice.py    远端能否看到画面（查公网候选）
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_cleanup_test_data.py --apply   清理自检账号
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_check_script_encoding.py       启动器脚本编码检查
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_check_anti_replay.py          防录播与检查项逻辑 20 项（离线，不改数据）
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_check_live_settings_http.py   接口级 15 项（加 --apply 写入推荐值）
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_check_web_pages.py          网页静态检查（6 个主页面含 app.html：标签配平 + 脚本语法 + id 唯一，不用起服务）
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_check_anti_replay_ui.py       浏览器界面 15 项（真实拨动开关并核对）
+   （旧版假桌面页自检 49 项已随页面退役，归档在 archive\legacy-fake-desktop\，不再列入自检）
+   E:\AiLive\env\python.exe E:\AiLive\tools\smoke\_e2e_desktop_offline.py       旧版离线留档页 8 项（file://，不联网）
+11. 启动器会同时打印电脑地址和手机访问地址（手机访问地址不再需要登录即可显示）。
+12. 同一个账号同一时间只能在一处登录：在第二台设备登录成功后，原来那台会自动退出
+   （再打开任何页面就回到登录页）。这是为了不让一个付费账号被多人同时用。
+   管理员账号不受限制（可以同时开多个浏览器，自检脚本也不会把你挤下线）。
+   开关在“用户管理 → 登录设置 → 同一账号只允许一处登录”，默认开启。
+
+分享给别人看：
+1. 同一个 Wi-Fi / 同一条网线的人：直接把 http://172.16.40.169:8010/app.html 发给他（统一界面；
+   旧的 http://172.16.40.169:8010/live_console.html 仍然能用；发根地址 http://172.16.40.169:8010 也会自动跳到 app.html）。
+   服务监听 0.0.0.0，防火墙已放行本项目的 python（Public/Private 都允许），不用再设置。
+   这台电脑以太网是 172.16.40.169（首选），Wi-Fi 那个 172.16.40.170 已被系统标记为 Deprecated，
+   所以发 .169 这个；启动器窗口和“接入与帮助”页里报的也是它。
+2. 不在同一个网络的人（外地、手机流量、评委在别的城市）：双击“外网分享给别人看.cmd”，
+   窗口里会用绿色打印一行真地址（形如 https://随机词-随机词.trycloudflare.com），
+   它同时会被复制到剪贴板、并写进“当前分享地址.txt”。把这一行原样发给别人就能打开。
+   注意：文档里写的 https://xxxx.trycloudflare.com 只是占位符（抄它当然打不开）。
+   窗口里出现“✅ 已验证：这个地址现在就能打开”再发出去最稳妥；
+   刚建好/刚重连的头 30-90 秒域名还在解析（本机实测这段会报“找不到服务器”），稍等即可。
+   隧道断了脚本会自动重连（地址会变，看窗口里新的那一行），不会像以前那样悄悄失效。
+   关掉那个窗口 = 停止分享；也可以双击“停止外网分享.cmd”强制停（已验证：停了不会自己重连）。
+   隧道免费、不需要账号、不动路由器；地址每次重启都会变，只在窗口开着时有效。
+3. 对方打开会先看到登录页：自助注册开放，注册后是免费版（看工作台、看商品库、模拟评论；
+   不能开播）。要完整功能请你在“用户管理”页给他发激活码，或直接建一个专业版账号。
+4. 外网隧道是 https，所以对方那边麦克风/摄像头能用；局域网 http 访问时浏览器会禁掉麦克风
+   （实测 navigator.mediaDevices 为 undefined；本机 127.0.0.1 不受限）。
+5. 数字人“画面”走 WebRTC 直连，不走隧道：能不能在远端看到，取决于两边网络的打洞情况
+   （本机实测能拿到公网候选 112.49.158.3，属于有希望但不保证）。
+   最准的验证办法：用手机流量打开你发出去的地址试一次。
+   如果远端看不到画面，就让 AI 助手配 TURN 或改成 HTTP-FLV 播放（走 https 隧道没问题）。
+6. 公开分享前建议先关掉自助注册（“用户管理 → 登录设置”取消“允许用户自助注册”）：
+   否则拿到地址的任何人都能注册账号，而“停播/打断/紧急停止”这类安全按钮对任何已登录用户都放行，
+   陌生人可能误触、把你的直播停掉。
+
+大模型与字幕自动回应：
+1. 大模型管理：http://127.0.0.1:8010/llm.html
+2. 可在 DeepSeek、通义千问和自定义 OpenAI 兼容模型之间切换。
+3. 字幕自动回应：http://127.0.0.1:8010/subtitle.html
+4. 先连接数字人，再截取屏幕并框选字幕区域，最后启动监控。
+
+Yamy 2.5D 数字宠物（两种音色）：
+1. 桌面版左导航「运营 → Yamy 2.5D 数字宠物」，或浏览器打开 http://127.0.0.1:8010/yamy/index.html
+2. 两个音色都是项目自带的本地录音素材：LiveTalking\web\yamy\audio\timbre-1.m4a（音色一，1 分 20 秒）、
+   timbre-2.m4a（音色二，1 分 38 秒）。选音色后点「播放音色一/二」试听，口型跟着音频振幅实时变化，
+   全程不联网、不上传任何文本。
+3. 想让它读自定义文本：切到「系统语音」（用 Windows 自带的语音引擎），输入文本后点「朗读文本」；
+   「开始听我说」的语音识别输入也只在系统语音下可用（素材音色是固定录音，改文本不会变声）。
+4. 标签切到后台会自动停止播放，不会在后台一直响。
+5. 换素材：用新的 m4a 覆盖上面两个文件即可（保持文件名）；要重新生成整套页面则执行
+   env\python.exe tmp\build_yamy.py，它会从 yamy_25d\yamy_25d.html + 音频素材\1.m4a、2.m4a 重新产出。
+
+音色库（语音合成页 · 预录音色）：
+1. 桌面版左导航「核心 → 语音合成」，或浏览器打开 http://127.0.0.1:8010/tts/index.html。
+2. 页面上方「语音合成服务地址（TTS）」留空就是本机 8010 自带的音色库；点「连接测试」加载列表。
+3. 列表里有三类音色：
+   · 预设语音（晓晓/晓伊/云希…7 个，Edge TTS）：能朗读任意文本，但需要联网。
+   · 本机语音（慧慧 等，Windows 系统自带）：也能朗读任意文本，而且**完全离线**；
+     断网或 Edge 接口被微软拒绝（403）时，选预设语音合成会自动用「慧慧」兜底，不会哑掉。
+     如果合成报 403，执行 env\python.exe -m pip install -U edge-tts 后重启服务即可。
+   · 已上传（预录音色）：音频素材\1.m4a、2.m4a 已登记成「音色一」（1 分 20 秒）、「音色二」（1 分 38 秒）。
+     点 ▶ 直接试听原声，点 ✓ 选用；它们只能回放原声，朗读新文本会被拒绝并提示改用预设或本机语音
+     ——本机没有零样本音色克隆模型（models 目录里只有 wav2lip.pth），这点不糊弄。
+4. 音色文件都在 LiveTalking\data\voices\<音色名>\（sample.m4a 原始、sample.wav 16k 单声道、meta.json）。
+   再登记别的录音：env\python.exe tools\register_voice_samples.py（默认只补缺，--force 覆盖，--list 查看），
+   也可以直接在网页上「上传克隆音色」——现在上传走本机音色库，不再依赖外部服务。
+5. 要真正做「音色克隆」（用新音色朗读任意文本），需要接入带克隆能力的 TTS 服务（如 CosyVoice /
+   IndexTTS2 的 API），把它的地址填到上面那个服务地址里即可；原先默认的 http://localhost:8091
+   （vLLM Omni）本机没有部署，所以之前上传必然失败。
+
+视频号 / 抖音 AI 直播：
+1. 双击“一键启动AI数字人.cmd”。
+2. 在“达人带货商品库”录入平台商品ID、已核对价格/优惠/卖点和内部佣金。
+3. 确认信息已与商品卡核对且素材已授权，再设为当前商品并生成自动话术。
+4. 在控制台打开9:16直播输出窗口，并点击“启动直播画面”。
+5. 在平台官方直播伴侣中添加“窗口采集”，选择“AI 数字人直播输出”。
+6. 平台挂载的商品必须与工作台“当前商品”一致；佣金字段不会口播。
+7. 启用系统或应用音频采集，测试声音后再正式开播。
+8. 停播后双击“停止AI直播服务.cmd”。
+
+防录播（平台判“录播 / 无人直播”看的是固定周期重复，不是有没有人坐在旁边）：
+1. 工作台默认：话术间隔 30 秒、“打乱话术顺序（防录播）”开启。
+2. 只要开着“循环播放”，间隔不足 15 秒会被自动上浮到 15 秒（含以前的 8 秒旧数据）。
+3. 每条之间还有 ±35% 随机抖动；新一轮的第一条不会和上一轮最后一条相同。
+4. 开播检查中心新增两项必做人工确认：“值守痕迹可观测（真人实时读评论并回应）”
+   和“百货各子类目资质已核对”，另有一项防录播自动提示（橙色，不阻塞开播）。
+5. 最稳的做法是关掉“循环播放”，由值守人员逐轮手动继续——每次继续都有人操作。
+
+完整教程与日常SOP：
+1. 服务启动后：http://127.0.0.1:8010/affiliate_tutorial.html
+2. 离线教程：E:\AiLive\docs\AI达人带货直播完整教程.md
+3. 工作台“开播 SOP 检查中心”会列出必做项、建议项和处理方法。
+4. 修改当前商品、价格、话术或画面后，部分检查项会自动撤销，必须重新核对。
+5. “备份运营配置”会导出商品库、佣金、设置和话术，但不会导出 API Key。
+
+停止方法：
+1. 双击“停止AI直播服务.cmd”。
+2. 或在启动服务的黑色窗口中按 Ctrl+C。
+
+关键路径：
+源码：E:\AiLive\LiveTalking
+桌面版界面（主版本，单文件）：E:\AiLive\LiveTalking\web\desktop.html
+Python环境：E:\AiLive\env
+启动/停止/预热脚本：E:\AiLive\tools
+登录数据（用户/激活码/设置）：E:\AiLive\LiveTalking\data\auth
+重置账号密码：E:\AiLive\重置管理员密码.cmd
+登录自检：E:\AiLive\tools\smoke\_smoke_auth.py
+模型：E:\AiLive\LiveTalking\models\wav2lip.pth
+示例数字人：E:\AiLive\LiveTalking\data\avatars\wav2lip256_avatar1
+运行日志：E:\AiLive\server.live.stderr.log（当前）、E:\AiLive\logs\archive（历史）
+
+目录说明（详见 E:\AiLive\docs\目录结构与维护说明.md）：
+LiveTalking\   源码（git 仓库）
+desktop\       桌面版离线演示副本（与 web\desktop.html 同一份代码，file:// 打开自动演示模式）
+env\           Python 运行环境
+tools\         启动、停止、离线语音预热、移动端打包脚本
+tools\smoke\   冒烟自检脚本（意图路由 / 离线语音）
+docs\          使用与维护文档
+logs\archive\  历史日志
+competition\   创业大赛申报材料（脚本、数据、提取文本、PPT 模板）
+outputs\       计划书 / 路演稿 / 报名表等产出
+work\          构建中间产物（浏览器导出配置、PDF 渲染缓存）
+_qa\           界面与渲染验收记录
+archive\       安装包等大体积归档
+tmp\           临时文件
+
+注意：
+- 发布到直播平台时应保留项目要求的 LiveTalking 水印/标识，并按平台要求标明 AI 生成。
+- 不要使用无授权的人脸、声音、音乐或商品素材。
+- 直播期间保留真人值守和随时接管能力。
+
+断网保命（离线语音缓存）：
+1. 联网时执行：E:\AiLive\env\python.exe E:\AiLive\tools\prewarm_tts_cache.py
+2. 该命令把高频问题话术（价格、规格、发货、售后等）合成为本地语音缓存，断网也能播、且接近零延迟。
+3. 工作台“开播 SOP 检查中心”会显示“离线语音缓存已覆盖高频话术”的覆盖率。
+4. 新增商品、修改价格或话术后，请重新执行预热；换音色后也必须重新预热。
+
+模拟评论测试（开播前自检 / 演示 / 排障）：
+1. 打开工作台 http://127.0.0.1:8010/live_console.html，找到“6. 模拟评论测试”。
+2. 输入一句观众评论（或点“价格 / 规格 / 售后 / 未命中示例”快捷按钮），点“模拟一条评论”。
+3. 结果会显示：走了哪条链路（T1 意图直答 / T2 大模型回答）、命中的意图与命中词、
+   将播报的话术、这句话断网时能不能播（离线可播）、判定耗时、是否已播报。
+4. 勾选“同时让数字人播报”可让数字人直接说出来，前提是已打开并连接直播输出窗口。
+5. 未命中问题走 T2，需要先在大模型管理页配置 API Key，否则会提示“API Key 尚未配置”。

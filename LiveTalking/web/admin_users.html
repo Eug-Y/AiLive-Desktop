@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>用户与会员管理 - AI 数字人直播工作台</title>
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script src="/common.js"></script>
+  <script src="/auth.js"></script>
+  <style>
+    .au-wrap { max-width: 1280px; margin: 0 auto; padding: 8px 18px 56px; }
+    .au-grid { display: grid; grid-template-columns: minmax(320px, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .au-grid > .card { margin-bottom: 0; }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-scroll table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    .table-scroll th, .table-scroll td { padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: left; vertical-align: middle; }
+    .table-scroll th { font-size: 12px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; background: var(--surface-sunken); position: sticky; top: 0; }
+    .table-scroll tr:hover td { background: var(--primary-light); }
+    .cell-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip-status { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: var(--radius-pill); font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+    .chip-status.ok { background: var(--success-bg); color: var(--success-fg); }
+    .chip-status.warn { background: var(--warning-bg); color: var(--warning-strong); }
+    .chip-status.bad { background: var(--danger-bg); color: var(--danger-fg); }
+    .chip-status.mute { background: var(--surface-sunken); color: var(--text-secondary); }
+    .code-text { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; letter-spacing: 0.4px; }
+    .form-tight { margin-bottom: 12px; }
+    .au-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .au-modal-backdrop { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(17,28,53,.5); }
+    .au-modal { width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; background: var(--card-bg); border-radius: var(--radius-md, 14px); box-shadow: 0 20px 60px rgba(17,28,53,.3); }
+    .au-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; }
+    .au-modal-body { padding: 20px; }
+    .au-modal-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 0 20px 20px; }
+    .au-empty { padding: 18px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+    .new-codes { display: grid; gap: 6px; margin-top: 12px; }
+    .new-codes .code-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius-xs, 8px); }
+    .new-codes .code-row .code-text { flex: 1; }
+    @media (max-width: 992px) {
+      .au-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <nav id="lt-nav-container"></nav>
+  <main class="au-wrap">
+    <div class="page-heading">
+      <div>
+        <h1 class="page-title"><i class="bi bi-people"></i> 用户与会员管理</h1>
+        <p class="page-subtitle">管理账号、套餐与激活码。激活码由管理员生成，用户在工作台「升级会员」页输入即可解锁专业版。</p>
+      </div>
+      <div class="actions">
+        <button id="refreshAll" class="btn btn-outline" type="button"><i class="bi bi-arrow-clockwise"></i> 刷新数据</button>
+      </div>
+    </div>
+
+    <div id="riskAlerts"></div>
+
+    <section class="card">
+      <div class="card-header"><i class="bi bi-speedometer2"></i> 概览</div>
+      <div class="card-body">
+        <div class="stat-grid" id="statCards"><div class="hint">正在读取…</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><i class="bi bi-person-plus"></i> 新建账号</div>
+      <div class="card-body">
+        <p class="hint mt-0">即使关闭了自助注册，管理员也可以在这里直接开号；把套餐设为专业版即可让对方立刻拥有完整功能。</p>
+        <div class="form-row">
+          <div class="form-group form-tight">
+            <label class="form-label" for="newUsername">用户名 <span class="req">*</span></label>
+            <input class="form-control" id="newUsername" placeholder="3-24 位中英文 / 数字 / 下划线" autocomplete="off">
+          </div>
+          <div class="form-group form-tight">
+            <label class="form-label" for="newPassword">初始密码 <span class="req">*</span></label>
+            <input class="form-control" id="newPassword" type="text" placeholder="至少 8 位，含字母和数字" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-tight">
+            <label class="form-label" for="newDisplayName">昵称</label>
+            <input class="form-control" id="newDisplayName" placeholder="选填，例如：小李的直播间">
+          </div>
+          <div class="form-group form-tight">
+            <label class="form-label" for="newPlan">套餐</label>
+            <select class="form-select" id="newPlan">
+              <option value="free">免费版（只能查看与试听）</option>
+              <option value="pro">专业版（完整功能）</option>
+              <option value="admin">管理员（含后台）</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-tight">
+            <label class="form-label" for="newDays">专业版天数</label>
+            <input class="form-control" id="newDays" type="number" min="1" max="3650" value="30">
+          </div>
+          <div class="form-group form-tight">
+            <label class="form-label" for="newNote">备注</label>
+            <input class="form-control" id="newNote" placeholder="选填，例如：微信昵称 / 订单号">
+          </div>
+        </div>
+        <div class="au-actions">
+          <button id="createUser" class="btn btn-primary" type="button"><i class="bi bi-person-plus"></i> 创建账号</button>
+          <span class="hint" id="createUserMessage"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <i class="bi bi-person-lines-fill"></i> 账号列表
+        <span class="card-subtitle ms-auto" id="userCountLabel">—</span>
+      </div>
+      <div class="card-body">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>账号</th><th>角色</th><th>套餐</th><th>到期 / 剩余</th>
+                <th>状态</th><th>最近登录</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="userRows">
+              <tr><td colspan="7" class="au-empty">正在读取…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="au-grid">
+      <section class="card">
+        <div class="card-header"><i class="bi bi-ticket-perforated"></i> 生成激活码</div>
+        <div class="card-body">
+          <p class="hint mt-0">用户付款后把激活码发给他，在「升级会员」页输入即可解锁。一码一用，重复兑换会在现有到期时间上叠加天数。</p>
+          <div class="form-row">
+            <div class="form-group form-tight">
+              <label class="form-label" for="codePlan">解锁套餐</label>
+              <select class="form-select" id="codePlan">
+                <option value="pro">专业版</option>
+                <option value="admin">管理员（内部授权）</option>
+              </select>
+            </div>
+            <div class="form-group form-tight">
+              <label class="form-label" for="codeDays">有效天数</label>
+              <input class="form-control" id="codeDays" type="number" min="1" max="3650" value="30">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-tight">
+              <label class="form-label" for="codeCount">生成数量</label>
+              <input class="form-control" id="codeCount" type="number" min="1" max="200" value="1">
+            </div>
+            <div class="form-group form-tight">
+              <label class="form-label" for="codeMaxUses">每码可用次数</label>
+              <input class="form-control" id="codeMaxUses" type="number" min="1" max="1000" value="1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-tight">
+              <label class="form-label" for="codeValidDays">激活码有效期（天）</label>
+              <input class="form-control" id="codeValidDays" type="number" min="0" max="3650" value="0">
+              <div class="form-hint">0 = 永不过期</div>
+            </div>
+            <div class="form-group form-tight">
+              <label class="form-label" for="codeNote">备注</label>
+              <input class="form-control" id="codeNote" placeholder="选填，例如：某客户 30 天">
+            </div>
+          </div>
+          <div class="au-actions">
+            <button id="createCodes" class="btn btn-primary" type="button"><i class="bi bi-ticket-perforated"></i> 生成</button>
+            <button id="copyNewCodes" class="btn btn-outline" type="button" disabled><i class="bi bi-copy"></i> 复制刚生成的码</button>
+          </div>
+          <div class="new-codes" id="newCodes"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <i class="bi bi-list-check"></i> 激活码记录
+          <div class="ms-auto">
+            <select class="form-select" id="codeFilter" style="min-width:150px">
+              <option value="all">全部状态</option>
+              <option value="unused">未使用</option>
+              <option value="used">已使用</option>
+              <option value="expired">已过期</option>
+              <option value="revoked">已作废</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>激活码</th><th>套餐</th><th>天数</th><th>状态</th>
+                  <th>使用</th><th>使用者</th><th>创建时间</th><th>备注</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="codeRows">
+                <tr><td colspan="9" class="au-empty">正在读取…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint" id="codeCountLabel">—</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-header"><i class="bi bi-sliders"></i> 登录设置</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group form-tight">
+            <label class="form-check"><input type="checkbox" id="cfgAllowRegister"><span class="form-check-label">允许用户自助注册</span></label>
+            <div class="form-hint">关闭后只能由管理员在这里开号。</div>
+          </div>
+          <div class="form-group form-tight">
+            <label class="form-check"><input type="checkbox" id="cfgEnabled"><span class="form-check-label">启用登录验证</span></label>
+            <div class="form-hint">关闭后所有人无需登录即可使用全部功能，仅在完全可信的内网临时使用。</div>
+          </div>
+          <div class="form-group form-tight">
+            <label class="form-check"><input type="checkbox" id="cfgSingleSession"><span class="form-check-label">同一账号只允许一处登录</span></label>
+            <div class="form-hint">新登录会让该账号在其他设备上的登录退出（后来者顶下去），避免一个付费账号被多人同时使用。管理员账号不受此限制。</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-tight">
+            <label class="form-label" for="cfgDays">专业版默认天数</label>
+            <input class="form-control" id="cfgDays" type="number" min="1" max="3650">
+          </div>
+          <div class="form-group form-tight">
+            <label class="form-label" for="cfgPromoDays">试用 / 活动天数</label>
+            <input class="form-control" id="cfgPromoDays" type="number" min="1" max="3650">
+          </div>
+        </div>
+        <div class="form-group form-tight">
+          <label class="form-label" for="cfgContact">客服联系方式（显示在升级页）</label>
+          <input class="form-control" id="cfgContact" placeholder="例如：微信 ailive-service / 电话 138xxxxxxxx">
+        </div>
+        <div class="form-group form-tight">
+          <label class="form-label" for="cfgPurchaseNote">购买说明（显示在升级页）</label>
+          <textarea class="form-control" id="cfgPurchaseNote" rows="3" placeholder="例如：扫码付款后把截图发给客服，客服会把激活码发给你。"></textarea>
+        </div>
+        <div class="au-actions">
+          <button id="saveConfig" class="btn btn-primary" type="button"><i class="bi bi-save"></i> 保存设置</button>
+          <span class="hint" id="configMessage"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><i class="bi bi-info-circle"></i> 套餐与功能对照</div>
+      <div class="card-body">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>功能</th><th>需要套餐</th></tr></thead>
+            <tbody id="featureRows"><tr><td colspan="2" class="au-empty">正在读取…</td></tr></tbody>
+          </table>
+        </div>
+        <p class="hint">安全操作（安全下播、紧急停止、打断播报）不受套餐限制，免费用户也能随时止损。</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = (sel, root) => (root || document).querySelector(sel);
+    const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+    let users = [];
+    let codes = [];
+    let stats = {};
+    let config = {};
+    let editing = null;
+    let lastCreatedCodes = [];
+
+    function esc(text) {
+      return String(text === undefined || text === null ? '' : text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function fmtDate(value) {
+      if (!value) return '—';
+      return String(value).slice(0, 10);
+    }
+
+    function fmtTime(value) {
+      if (!value) return '从未登录';
+      const date = new Date(value);
+      if (isNaN(date.getTime())) return String(value);
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+
+    const PLAN_LABELS = { free: '免费版', pro: '专业版', admin: '管理员' };
+    const CODE_STATUS = {
+      unused: { label: '未使用', cls: 'ok' },
+      used: { label: '已使用', cls: 'mute' },
+      expired: { label: '已过期', cls: 'warn' },
+      revoked: { label: '已作废', cls: 'bad' },
+    };
+
+    async function copyText(text, okTitle) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          document.execCommand('copy');
+          area.remove();
+        }
+        LT.Toast.success(okTitle || '已复制', text.length > 40 ? '' : text);
+      } catch (error) {
+        LT.Toast.error('复制失败', '请手动选择文本复制');
+      }
+    }
+
+    /* ── 渲染 ─────────────────────────────────────────── */
+
+    function renderStats() {
+      const rows = [
+        ['用户总数', stats.total_users, 'bi-people'],
+        ['管理员', stats.admins, 'bi-shield-check'],
+        ['专业版会员', stats.paid_users, 'bi-gem'],
+        ['免费用户', stats.free_users, 'bi-person'],
+        ['已禁用', stats.disabled_users, 'bi-slash-circle'],
+        ['激活码总数', stats.total_codes, 'bi-ticket-perforated'],
+        ['未使用激活码', stats.unused_codes, 'bi-ticket-detailed'],
+        ['在线会话', stats.active_sessions, 'bi-plug'],
+      ];
+      $('#statCards').innerHTML = rows.map(([label, value, icon]) =>
+        '<div class="stat-card is-info"><span class="stat-label"><i class="bi ' + icon + '"></i> ' +
+        esc(label) + '</span><span class="stat-value">' + esc(value === undefined ? '—' : value) +
+        '</span></div>').join('');
+    }
+
+    function renderAlerts() {
+      const parts = [];
+      if (config.enabled === false) {
+        parts.push('<div class="alert alert-danger"><i class="bi bi-unlock-fill"></i>' +
+          '<span><b>登录验证当前已关闭。</b>所有人（包括访客）无需登录即可开播并使用后台，请尽快重新启用。</span></div>');
+      }
+      const risky = users.filter((user) => user.must_change_password);
+      if (risky.length) {
+        parts.push('<div class="alert alert-warning"><i class="bi bi-shield-exclamation"></i>' +
+          '<span>以下账号仍在使用初始密码，建议立即修改：' +
+          esc(risky.map((user) => user.username).join('、')) + '</span></div>');
+      }
+      $('#riskAlerts').innerHTML = parts.join('');
+    }
+
+    function renderUsers() {
+      const body = $('#userRows');
+      $('#userCountLabel').textContent = '共 ' + users.length + ' 个账号';
+      if (!users.length) {
+        body.innerHTML = '<tr><td colspan="7" class="au-empty">还没有账号</td></tr>';
+        return;
+      }
+      body.innerHTML = users.map((user) => {
+        const name = esc(user.display_name || user.username);
+        const accountCell = '<b>' + name + '</b>' +
+          (user.display_name && user.display_name !== user.username
+            ? '<div class="hint" style="font-size:11.5px">' + esc(user.username) + '</div>' : '') +
+          (user.must_change_password ? '<div class="hint" style="font-size:11.5px;color:var(--warning-strong)">初始密码未修改</div>' : '') +
+          (user.note ? '<div class="hint" style="font-size:11.5px">备注：' + esc(user.note) + '</div>' : '');
+        const planCell = esc(PLAN_LABELS[user.plan] || user.plan) +
+          (user.is_admin ? '' : (user.plan === 'pro'
+            ? '<div class="hint" style="font-size:11.5px">' + fmtDate(user.plan_expires_at) + '</div>' : ''));
+        const expiryCell = user.is_admin
+          ? '<span class="chip-status ok">永久</span>'
+          : (user.plan !== 'pro'
+            ? '<span class="chip-status mute">—</span>'
+            : (user.plan_expired
+              ? '<span class="chip-status bad">已过期</span>'
+              : '<div>' + fmtDate(user.plan_expires_at) + '</div>' +
+                '<div class="hint" style="font-size:11.5px">剩余 ' +
+                esc(user.plan_days_left === null ? '—' : user.plan_days_left) + ' 天</div>'));
+        const stateCell = user.disabled
+          ? '<span class="chip-status bad">已禁用</span>'
+          : '<span class="chip-status ok">正常</span>';
+        return '<tr>' +
+          '<td>' + accountCell + '</td>' +
+          '<td>' + (user.role === 'admin' ? '<span class="chip-status warn">管理员</span>' : '普通用户') + '</td>' +
+          '<td>' + planCell + '</td>' +
+          '<td>' + expiryCell + '</td>' +
+          '<td>' + stateCell + '</td>' +
+          '<td>' + esc(fmtTime(user.last_login_at)) +
+            (user.login_count ? '<div class="hint" style="font-size:11.5px">登录 ' + esc(user.login_count) + ' 次</div>' : '') + '</td>' +
+          '<td><div class="cell-actions">' +
+            '<button class="btn btn-outline btn-sm" type="button" data-user-action="edit" data-username="' + esc(user.username) + '"><i class="bi bi-pencil"></i> 编辑</button>' +
+            '<button class="btn btn-outline btn-sm" type="button" data-user-action="password" data-username="' + esc(user.username) + '"><i class="bi bi-key"></i> 重置密码</button>' +
+            '<button class="btn btn-outline btn-sm" type="button" data-user-action="toggle" data-username="' + esc(user.username) + '">' +
+              (user.disabled ? '<i class="bi bi-play-circle"></i> 解禁' : '<i class="bi bi-slash-circle"></i> 禁用') + '</button>' +
+            '<button class="btn btn-outline btn-sm" type="button" data-user-action="kick" data-username="' + esc(user.username) + '"><i class="bi bi-box-arrow-right"></i> 强制下线</button>' +
+            '<button class="btn btn-outline btn-sm" type="button" data-user-action="delete" data-username="' + esc(user.username) + '"><i class="bi bi-trash"></i> 删除</button>' +
+          '</div></td></tr>';
+      }).join('');
+    }
+
+    function filterCodes() {
+      const want = $('#codeFilter').value;
+      return want === 'all' ? codes : codes.filter((code) => code.status === want);
+    }
+
+    function renderCodes() {
+      const body = $('#codeRows');
+      const rows = filterCodes();
+      $('#codeCountLabel').textContent = '共 ' + codes.length + ' 条记录，当前显示 ' + rows.length + ' 条';
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="9" class="au-empty">没有符合条件的激活码</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.map((code) => {
+        const status = CODE_STATUS[code.status] || { label: code.status, cls: 'mute' };
+        const usedBy = (code.used_by || []).length ? code.used_by.join('、') : '—';
+        return '<tr>' +
+          '<td><span class="code-text">' + esc(code.code) + '</span></td>' +
+          '<td>' + esc(PLAN_LABELS[code.plan] || code.plan) + '</td>' +
+          '<td>' + esc(code.days) + ' 天</td>' +
+          '<td><span class="chip-status ' + status.cls + '">' + esc(status.label) + '</span>' +
+            (code.expires_at ? '<div class="hint" style="font-size:11.5px">码有效期至 ' + fmtDate(code.expires_at) + '</div>' : '') + '</td>' +
+          '<td>' + esc(code.used_count) + ' / ' + esc(code.max_uses) + '</td>' +
+          '<td>' + esc(usedBy) + '</td>' +
+          '<td>' + fmtTime(code.created_at) + '</td>' +
+          '<td>' + esc(code.note || '—') + '</td>' +
+          '<td><div class="cell-actions">' +
+            '<button class="btn btn-outline btn-sm" type="button" data-code-action="copy" data-code="' + esc(code.code) + '"><i class="bi bi-copy"></i> 复制</button>' +
+            (code.status === 'revoked' ? '' :
+              '<button class="btn btn-outline btn-sm" type="button" data-code-action="revoke" data-code="' + esc(code.code) + '"><i class="bi bi-slash-circle"></i> 作废</button>') +
+          '</div></td></tr>';
+      }).join('');
+    }
+
+    function renderConfig() {
+      $('#cfgAllowRegister').checked = config.allow_register !== false;
+      $('#cfgEnabled').checked = config.enabled !== false;
+      $('#cfgSingleSession').checked = config.single_session !== false;
+      $('#cfgDays').value = config.pro_days_default || 30;
+      $('#cfgPromoDays').value = config.promo_days_default || 7;
+      $('#cfgContact').value = config.contact || '';
+      $('#cfgPurchaseNote').value = config.purchase_note || '';
+    }
+
+    function renderFeatures() {
+      const features = Auth.state.features || {};
+      const keys = Object.keys(features);
+      if (!keys.length) {
+        $('#featureRows').innerHTML = '<tr><td colspan="2" class="au-empty">未读取到功能表</td></tr>';
+        return;
+      }
+      $('#featureRows').innerHTML = keys.map((key) => {
+        const meta = features[key];
+        const plan = PLAN_LABELS[meta.plan] || meta.plan;
+        const cls = meta.plan === 'free' ? 'ok' : (meta.plan === 'admin' ? 'bad' : 'warn');
+        return '<tr><td>' + esc(meta.label) + '<div class="hint" style="font-size:11.5px">' +
+          esc(key) + '</div></td><td><span class="chip-status ' + cls + '">' + esc(plan) + '</span></td></tr>';
+      }).join('');
+    }
+
+    function renderNewCodes() {
+      const host = $('#newCodes');
+      $('#copyNewCodes').disabled = !lastCreatedCodes.length;
+      if (!lastCreatedCodes.length) {
+        host.innerHTML = '';
+        return;
+      }
+      host.innerHTML = '<div class="hint">刚生成的激活码（点右侧复制单个）：</div>' +
+        lastCreatedCodes.map((code) =>
+          '<div class="code-row"><span class="code-text">' + esc(code.code) + '</span>' +
+          '<span class="hint">' + esc(code.days) + ' 天</span>' +
+          '<button class="btn btn-outline btn-sm" type="button" data-code-action="copy" data-code="' +
+          esc(code.code) + '"><i class="bi bi-copy"></i></button></div>').join('');
+    }
+
+    /* ── 数据 ─────────────────────────────────────────── */
+
+    async function loadAll() {
+      const [userData, codeData, configData] = await Promise.all([
+        Auth.request('/api/auth/admin/users'),
+        Auth.request('/api/auth/admin/codes'),
+        Auth.request('/api/auth/admin/config'),
+      ]);
+      users = userData.users || [];
+      stats = userData.stats || {};
+      codes = codeData.codes || [];
+      config = configData.config || {};
+      renderStats();
+      renderUsers();
+      renderCodes();
+      renderConfig();
+      renderAlerts();
+    }
+
+    async function refreshAll() {
+      const button = $('#refreshAll');
+      LT.Loading.button(button, true);
+      try {
+        await loadAll();
+      } catch (error) {
+        LT.Toast.error('读取失败', error.message);
+      } finally {
+        LT.Loading.button(button, false);
+      }
+    }
+
+    /* ── 编辑弹窗 ─────────────────────────────────────── */
+
+    function openUserModal(username, focusPassword) {
+      const user = users.find((item) => item.username === username);
+      if (!user) return;
+      editing = user;
+      const backdrop = document.createElement('div');
+      backdrop.className = 'au-modal-backdrop';
+      backdrop.id = 'userModal';
+      backdrop.innerHTML =
+        '<div class="au-modal" role="dialog" aria-modal="true">' +
+          '<div class="au-modal-head"><span><i class="bi bi-pencil"></i> 编辑 ' + esc(user.username) + '</span>' +
+            '<button class="btn btn-outline btn-sm" type="button" data-modal-close>&times;</button></div>' +
+          '<div class="au-modal-body">' +
+            '<div class="form-group form-tight"><label class="form-label" for="mDisplay">昵称</label>' +
+              '<input class="form-control" id="mDisplay" value="' + esc(user.display_name || '') + '"></div>' +
+            '<div class="form-row">' +
+              '<div class="form-group form-tight"><label class="form-label" for="mPlan">套餐</label>' +
+                '<select class="form-select" id="mPlan">' +
+                  ['free', 'pro', 'admin'].map((plan) =>
+                    '<option value="' + plan + '"' + (user.plan === plan ? ' selected' : '') + '>' +
+                    esc(PLAN_LABELS[plan]) + '</option>').join('') +
+                '</select></div>' +
+              '<div class="form-group form-tight"><label class="form-label" for="mRole">角色</label>' +
+                '<select class="form-select" id="mRole">' +
+                  '<option value="user"' + (user.role === 'user' ? ' selected' : '') + '>普通用户</option>' +
+                  '<option value="admin"' + (user.role === 'admin' ? ' selected' : '') + '>管理员</option>' +
+                '</select></div>' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<div class="form-group form-tight"><label class="form-label" for="mDays">延长天数（专业版）</label>' +
+                '<input class="form-control" id="mDays" type="number" min="1" max="3650" value="' + esc(config.pro_days_default || 30) + '">' +
+                '<div class="form-hint">仅在套餐选专业版时生效，从当前到期时间往后叠加。</div></div>' +
+              '<div class="form-group form-tight"><label class="form-label" for="mExpires">指定到期时间</label>' +
+                '<input class="form-control" id="mExpires" type="datetime-local"></div>' +
+            '</div>' +
+            '<div class="form-group form-tight"><label class="form-label" for="mPassword">新密码</label>' +
+              '<input class="form-control" id="mPassword" type="text" placeholder="留空表示不修改；至少 8 位含字母和数字"></div>' +
+            '<div class="form-group form-tight"><label class="form-label" for="mNote">备注</label>' +
+              '<input class="form-control" id="mNote" value="' + esc(user.note || '') + '"></div>' +
+            '<div class="form-check form-tight"><input type="checkbox" id="mDisabled"' + (user.disabled ? ' checked' : '') + '>' +
+              '<span class="form-check-label">禁用该账号（立即踢下线，无法登录）</span></div>' +
+            '<div class="hint" id="mMessage"></div>' +
+          '</div>' +
+          '<div class="au-modal-foot">' +
+            '<button class="btn btn-outline" type="button" data-modal-close>取消</button>' +
+            '<button class="btn btn-primary" type="button" id="mSave">保存</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(backdrop);
+      if (user.plan_expires_at) {
+        const moment = new Date(user.plan_expires_at);
+        if (!isNaN(moment.getTime())) {
+          const local = new Date(moment.getTime() - moment.getTimezoneOffset() * 60000);
+          $('#mExpires', backdrop).value = local.toISOString().slice(0, 16);
+        }
+      }
+      $$('[data-modal-close]', backdrop).forEach((button) => {
+        button.addEventListener('click', () => backdrop.remove());
+      });
+      backdrop.addEventListener('click', (event) => {
+        if (event.target === backdrop) backdrop.remove();
+      });
+      $('#mSave', backdrop).addEventListener('click', () => saveUser(backdrop));
+      if (focusPassword) $('#mPassword', backdrop).focus();
+    }
+
+    async function saveUser(backdrop) {
+      if (!editing) return;
+      const button = $('#mSave', backdrop);
+      const payload = {
+        display_name: $('#mDisplay', backdrop).value.trim(),
+        plan: $('#mPlan', backdrop).value,
+        role: $('#mRole', backdrop).value,
+        days: Number($('#mDays', backdrop).value || 0),
+        note: $('#mNote', backdrop).value.trim(),
+        disabled: $('#mDisabled', backdrop).checked,
+      };
+      const password = $('#mPassword', backdrop).value;
+      if (password) payload.password = password;
+      const expires = $('#mExpires', backdrop).value;
+      if (expires) {
+        const moment = new Date(expires);
+        if (isNaN(moment.getTime())) {
+          $('#mMessage', backdrop).textContent = '到期时间格式不正确';
+          return;
+        }
+        payload.plan_expires_at = moment.toISOString();
+      }
+      LT.Loading.button(button, true);
+      try {
+        await Auth.request('/api/auth/admin/users/' + encodeURIComponent(editing.username), {
+          method: 'PUT', body: payload,
+        });
+        backdrop.remove();
+        LT.Toast.success('已保存', editing.username);
+        await loadAll();
+      } catch (error) {
+        $('#mMessage', backdrop).textContent = error.message;
+      } finally {
+        LT.Loading.button(button, false);
+      }
+    }
+
+    /* ── 事件 ─────────────────────────────────────────── */
+
+    $('#refreshAll').addEventListener('click', refreshAll);
+    $('#codeFilter').addEventListener('change', renderCodes);
+
+    $('#createUser').addEventListener('click', async () => {
+      const button = $('#createUser');
+      const message = $('#createUserMessage');
+      const payload = {
+        username: $('#newUsername').value.trim(),
+        password: $('#newPassword').value,
+        display_name: $('#newDisplayName').value.trim(),
+        plan: $('#newPlan').value,
+        role: $('#newPlan').value === 'admin' ? 'admin' : 'user',
+        days: Number($('#newDays').value || 30),
+        note: $('#newNote').value.trim(),
+      };
+      if (!payload.username || !payload.password) {
+        message.textContent = '请填写用户名和初始密码';
+        return;
+      }
+      LT.Loading.button(button, true);
+      message.textContent = '';
+      try {
+        await Auth.request('/api/auth/admin/users', { method: 'POST', body: payload });
+        LT.Toast.success('已创建账号', payload.username);
+        ['newUsername', 'newPassword', 'newDisplayName', 'newNote'].forEach((id) => { $('#' + id).value = ''; });
+        await loadAll();
+      } catch (error) {
+        message.textContent = error.message;
+      } finally {
+        LT.Loading.button(button, false);
+      }
+    });
+
+    $('#createCodes').addEventListener('click', async () => {
+      const button = $('#createCodes');
+      LT.Loading.button(button, true);
+      try {
+        const data = await Auth.request('/api/auth/admin/codes', {
+          method: 'POST',
+          body: {
+            plan: $('#codePlan').value,
+            days: Number($('#codeDays').value || 30),
+            count: Number($('#codeCount').value || 1),
+            max_uses: Number($('#codeMaxUses').value || 1),
+            valid_days: Number($('#codeValidDays').value || 0),
+            note: $('#codeNote').value.trim(),
+          },
+        });
+        lastCreatedCodes = data.codes || [];
+        renderNewCodes();
+        LT.Toast.success('已生成激活码', '共 ' + lastCreatedCodes.length + ' 个');
+        await loadAll();
+      } catch (error) {
+        LT.Toast.error('生成失败', error.message);
+      } finally {
+        LT.Loading.button(button, false);
+      }
+    });
+
+    $('#copyNewCodes').addEventListener('click', () => {
+      if (!lastCreatedCodes.length) return;
+      copyText(lastCreatedCodes.map((code) => code.code).join('\n'), '已复制 ' + lastCreatedCodes.length + ' 个激活码');
+    });
+
+    $('#saveConfig').addEventListener('click', async () => {
+      const button = $('#saveConfig');
+      const message = $('#configMessage');
+      const nextEnabled = $('#cfgEnabled').checked;
+      if (nextEnabled === false && config.enabled !== false) {
+        if (!confirm('关闭后所有人无需登录即可使用全部功能（包括开播和后台管理），确定继续吗？')) {
+          $('#cfgEnabled').checked = true;
+          return;
+        }
+      }
+      LT.Loading.button(button, true);
+      message.textContent = '';
+      try {
+        const data = await Auth.request('/api/auth/admin/config', {
+          method: 'POST',
+          body: {
+            allow_register: $('#cfgAllowRegister').checked,
+            enabled: nextEnabled,
+            single_session: $('#cfgSingleSession').checked,
+            pro_days_default: Number($('#cfgDays').value || 30),
+            promo_days_default: Number($('#cfgPromoDays').value || 7),
+            contact: $('#cfgContact').value.trim(),
+            purchase_note: $('#cfgPurchaseNote').value.trim(),
+          },
+        });
+        config = data.config || config;
+        renderConfig();
+        renderAlerts();
+        message.textContent = '设置已保存';
+        LT.Toast.success('设置已保存');
+      } catch (error) {
+        message.textContent = error.message;
+      } finally {
+        LT.Loading.button(button, false);
+      }
+    });
+
+    $('#userRows').addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-user-action]');
+      if (!button) return;
+      const username = button.dataset.username;
+      const user = users.find((item) => item.username === username);
+      if (!user) return;
+      const action = button.dataset.userAction;
+      try {
+        if (action === 'edit') {
+          openUserModal(username, false);
+          return;
+        }
+        if (action === 'password') {
+          openUserModal(username, true);
+          return;
+        }
+        if (action === 'toggle') {
+          if (!user.disabled && !confirm('禁用「' + username + '」后该账号会立即掉线且无法登录，确定吗？')) return;
+          await Auth.request('/api/auth/admin/users/' + encodeURIComponent(username), {
+            method: 'PUT', body: { disabled: !user.disabled },
+          });
+          LT.Toast.success(user.disabled ? '已解禁' : '已禁用', username);
+          await loadAll();
+          return;
+        }
+        if (action === 'kick') {
+          const data = await Auth.request('/api/auth/admin/sessions/revoke', {
+            method: 'POST', body: { username: username },
+          });
+          LT.Toast.success('已强制下线', username + '（' + (data.revoked || 0) + ' 个会话）');
+          return;
+        }
+        if (action === 'delete') {
+          if (!confirm('删除「' + username + '」后无法恢复（商品和话术不受影响），确定删除吗？')) return;
+          await Auth.request('/api/auth/admin/users/' + encodeURIComponent(username), { method: 'DELETE' });
+          LT.Toast.success('已删除', username);
+          await loadAll();
+        }
+      } catch (error) {
+        LT.Toast.error('操作失败', error.message);
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-code-action]');
+      if (!button) return;
+      const code = button.dataset.code;
+      if (button.dataset.codeAction === 'copy') {
+        copyText(code, '已复制激活码');
+        return;
+      }
+      if (button.dataset.codeAction === 'revoke') {
+        if (!confirm('作废「' + code + '」后该激活码立即失效（已兑换的会员不受影响），确定吗？')) return;
+        Auth.request('/api/auth/admin/codes/revoke', { method: 'POST', body: { code: code } })
+          .then(async () => {
+            LT.Toast.success('已作废', code);
+            await loadAll();
+          })
+          .catch((error) => LT.Toast.error('作废失败', error.message));
+      }
+    });
+
+    /* ── 启动 ─────────────────────────────────────────── */
+
+    (async () => {
+      if (window.LT && window.LT.Nav) {
+        LT.Nav.current = 'admin_users';
+        LT.Nav.inject('#lt-nav-container');
+      }
+      const state = await Auth.mount({ into: '.page-heading .actions' });
+      if (!Auth.isAdmin()) {
+        document.querySelector('main').innerHTML =
+          '<div class="alert alert-danger" style="margin-top:32px">' +
+          '<i class="bi bi-shield-lock-fill"></i><span>仅管理员可访问本页面。</span></div>' +
+          '<p><a class="btn btn-primary" href="/live_console.html">返回直播工作台</a></p>';
+        return;
+      }
+      if (state && state.must_change_password) {
+        LT.Toast.warning('请先修改初始密码', '你仍在使用公开的默认管理员密码');
+      }
+      renderFeatures();
+      await refreshAll();
+    })();
+  </script>
+</body>
+</html>

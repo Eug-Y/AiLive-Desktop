@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>账号管理 - LiveTalking</title>
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script src="/common.js"></script>
+  <style>
+    body { background: #f3f6fb; }
+    .accounts-page { max-width: 1240px; margin: 0 auto; padding: 8px 18px 56px; }
+    .accounts-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 460px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .accounts-grid > .card { margin-bottom: 0; }
+    .field { margin-bottom: 12px; }
+    .row-hint { margin: -2px 0 14px; }
+    .hint { color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+    .account-list { display: grid; gap: 10px; }
+    .account-item { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--input-bg); }
+    .account-item.active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .account-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .account-name { font-weight: 700; }
+    .account-meta { color: var(--text-secondary); font-size: 12px; margin-top: 4px; line-height: 1.6; }
+    .account-facts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 4px 14px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+    .account-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+    .summary-line { margin: 0 0 12px; }
+    .active-detail { margin-top: 14px; }
+    .active-detail .panel-title { font-size: 12.5px; }
+    .active-facts { display: grid; gap: 6px; }
+    .active-facts > div { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; line-height: 1.6; }
+    .active-facts > div > span { flex: 0 0 88px; color: var(--text-secondary); }
+    .active-facts > div > strong { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+    .message { min-height: 20px; margin-top: 10px; }
+    .message .alert { margin-bottom: 0; }
+    @media (max-width: 992px) {
+      .accounts-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <nav id="lt-nav-container"></nav>
+  <main class="accounts-page">
+    <div class="page-heading">
+      <div>
+        <h1 class="page-title"><i class="bi bi-people"></i>账号管理</h1>
+        <p class="subtitle">为不同平台账号隔离商品、话术、直播设置和运营数据。</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-outline" href="/live_console.html"><i class="bi bi-broadcast-pin"></i>返回直播工作台</a>
+      </div>
+    </div>
+
+    <div class="accounts-grid">
+      <section class="card card-fill-reset">
+        <div class="card-header"><i class="bi bi-person-plus"></i><span id="formTitle">新建直播账号</span></div>
+        <div class="card-body">
+          <form id="accountForm">
+            <div class="form-row">
+              <div class="field">
+                <label class="form-label" for="accountId">账号 ID</label>
+                <input class="form-control text-mono" id="accountId" placeholder="例如：fuzhou-seafood" title="账号 ID 用于接口与导出文件，建议使用英文小写和连字符">
+              </div>
+              <div class="field">
+                <label class="form-label" for="accountName">账号名称<span class="req">*</span></label>
+                <input class="form-control" id="accountName" required placeholder="例如：连江海产旗舰店">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label class="form-label" for="platform">平台</label>
+                <select class="form-select" id="platform">
+                  <option value="douyin">抖音</option>
+                  <option value="wechat_channels">微信视频号</option>
+                  <option value="kuaishou">快手</option>
+                  <option value="other">其他平台</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="form-label" for="platformAccountName">平台显示名称</label>
+                <input class="form-control" id="platformAccountName" placeholder="平台账号昵称">
+              </div>
+            </div>
+            <div class="field">
+              <label class="form-label" for="platformAccountId">平台账号 ID</label>
+              <input class="form-control text-mono" id="platformAccountId" placeholder="可选，用于运营核对">
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label class="form-label" for="avatarId">数字人形象 ID</label>
+                <input class="form-control text-mono" id="avatarId" value="wav2lip256_avatar1" title="数字人形象标识，内置默认形象为 wav2lip256_avatar1">
+              </div>
+              <div class="field">
+                <label class="form-label" for="ttsVoice">语音合成（TTS）音色</label>
+                <input class="form-control text-mono" id="ttsVoice" placeholder="zh-CN-XiaoxiaoNeural" title="完整示例：zh-CN-XiaoxiaoNeural（晓晓女声）、zh-CN-YunxiNeural（云希男声）">
+              </div>
+            </div>
+            <div class="hint row-hint">形象 ID 与音色标识请按原名填写；鼠标悬停输入框可查看完整示例，留空音色则使用系统默认音色。</div>
+            <div class="field">
+              <label class="form-label" for="liveTitle">直播间标题</label>
+              <input class="form-control" id="liveTitle" value="AI 数字人直播间">
+            </div>
+            <div class="field">
+              <label class="form-label" for="aiLabel">AI 标识</label>
+              <input class="form-control" id="aiLabel" value="AI 数字人 · 内容由人工值守">
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label class="form-label" for="scriptGap">话术间隔（秒）</label>
+                <input class="form-control" id="scriptGap" type="number" min="3" max="300" value="8">
+              </div>
+              <div class="field">
+                <label class="form-label" for="status">账号状态</label>
+                <select class="form-select" id="status">
+                  <option value="active">启用</option>
+                  <option value="paused">暂停</option>
+                  <option value="archived">归档</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="form-label" for="notes">运营备注</label>
+              <textarea class="form-control" id="notes" placeholder="记录账号定位、值守安排或平台注意事项"></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit" id="saveAccount"><i class="bi bi-check2"></i>保存账号</button>
+              <button class="btn btn-outline" type="button" id="resetForm"><i class="bi bi-eraser"></i>清空表单</button>
+            </div>
+            <div id="formMessage" class="message"></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="card card-fill-reset">
+        <div class="card-header">
+          <i class="bi bi-list-check"></i>已配置账号
+          <div class="card-actions">
+            <button class="btn btn-outline btn-sm" id="refreshAccounts" title="重新读取账号列表"><i class="bi bi-arrow-clockwise"></i>刷新</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="summary" class="hint summary-line">正在读取…</div>
+          <div id="accountList" class="account-list">
+            <div class="empty-state compact"><span class="spinner"></span><p>正在读取账号…</p></div>
+          </div>
+          <div id="activeDetail" class="active-detail"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    LT.Nav.current = 'accounts';
+    LT.Nav.inject('#lt-nav-container');
+    const $ = (id) => document.getElementById(id);
+    let editingId = '';
+
+    async function api(url, method = 'GET', body) {
+      const response = await fetch(url, {
+        method,
+        headers: body ? {'Content-Type': 'application/json'} : {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await response.json();
+      if (!response.ok || data.code !== 0) throw new Error(data.msg || `HTTP ${response.status}`);
+      return data.data;
+    }
+
+    function setMessage(text, ok = false) {
+      const box = $('formMessage');
+      if (!text) { box.className = 'message'; box.innerHTML = ''; return; }
+      box.className = 'message';
+      box.innerHTML = `<div class="alert ${ok ? 'alert-success' : 'alert-danger'}">
+        <i class="bi ${ok ? 'bi-check-circle' : 'bi-exclamation-triangle'}"></i>
+        <div class="alert-body">${LT.Utils.escape(text)}</div>
+      </div>`;
+    }
+
+    function payload() {
+      return {
+        id: $('accountId').value.trim(),
+        name: $('accountName').value.trim(),
+        platform: $('platform').value,
+        platform_account_id: $('platformAccountId').value.trim(),
+        platform_account_name: $('platformAccountName').value.trim(),
+        avatar_id: $('avatarId').value.trim(),
+        tts_voice: $('ttsVoice').value.trim(),
+        live_title: $('liveTitle').value.trim(),
+        ai_label: $('aiLabel').value.trim(),
+        script_gap_seconds: Number($('scriptGap').value),
+        status: $('status').value,
+        notes: $('notes').value.trim(),
+      };
+    }
+
+    function resetForm() {
+      editingId = '';
+      $('accountId').disabled = false;
+      $('formTitle').textContent = '新建直播账号';
+      $('accountForm').reset();
+      $('avatarId').value = 'wav2lip256_avatar1';
+      $('liveTitle').value = 'AI 数字人直播间';
+      $('aiLabel').value = 'AI 数字人 · 内容由人工值守';
+      $('scriptGap').value = '8';
+      $('status').value = 'active';
+      setMessage('');
+    }
+
+    function editAccount(account) {
+      editingId = account.id;
+      $('formTitle').textContent = '编辑直播账号';
+      Object.entries({
+        accountId: account.id,
+        accountName: account.name,
+        platform: account.platform,
+        platformAccountId: account.platform_account_id || '',
+        platformAccountName: account.platform_account_name || '',
+        avatarId: account.avatar_id || '',
+        ttsVoice: account.tts_voice || '',
+        liveTitle: account.live_title || '',
+        aiLabel: account.ai_label || '',
+        scriptGap: account.script_gap_seconds || 30,
+        status: account.status || 'active',
+        notes: account.notes || '',
+      }).forEach(([id, value]) => { $(id).value = value; });
+      $('accountId').disabled = true;
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    const STATUS_META = {
+      active: {text: '启用', cls: 'badge-success'},
+      paused: {text: '暂停', cls: 'badge-warning'},
+      banned: {text: '封禁', cls: 'badge-danger'},
+      archived: {text: '归档', cls: 'badge-secondary'},
+    };
+
+    function formatStamp(ts) {
+      if (!ts) return '暂无记录';
+      const d = new Date(ts * 1000);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    const ENGINE_GLOSS = {
+      wav2lip: '口型驱动模型',
+      edgetts: '微软 Edge 语音合成',
+      gpt_sovits: 'GPT-SoVITS 音色克隆',
+      cosyvoice: 'CosyVoice 语音合成',
+    };
+
+    function identifier(value, gloss) {
+      if (!value) return '未设置';
+      const text = `<span class="text-mono">${LT.Utils.escape(value)}</span>`;
+      return gloss ? `${text}（${LT.Utils.escape(gloss)}）` : text;
+    }
+
+    function renderActive(active) {
+      if (!active) { $('activeDetail').innerHTML = ''; return; }
+      const rows = [
+        ['账号名称', LT.Utils.escape(active.name || '未设置')],
+        ['数字人形象 ID', identifier(active.avatar_id)],
+        ['驱动模型', identifier(active.model, ENGINE_GLOSS[active.model])],
+        ['语音引擎', identifier(active.tts, ENGINE_GLOSS[active.tts])],
+        ['音色', active.tts_voice ? identifier(active.tts_voice) : '系统默认音色'],
+        ['话术间隔', `${Math.round(active.script_gap_seconds || 0)} 秒`],
+        ['直播间标题', LT.Utils.escape(active.live_title || '未设置')],
+        ['AI 标识', LT.Utils.escape(active.ai_label || '未设置')],
+      ];
+      $('activeDetail').innerHTML = `
+        <div class="panel">
+          <div class="panel-title"><i class="bi bi-broadcast"></i>当前生效账号设置</div>
+          <div class="active-facts">
+            ${rows.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    function render(data) {
+      const accounts = data.accounts || [];
+      $('summary').textContent = accounts.length
+        ? `共 ${accounts.length} 个账号，当前使用：${data.active_account ? data.active_account.name : '未选择'}`
+        : '尚未配置任何账号';
+      $('accountList').innerHTML = accounts.length ? accounts.map((account) => {
+        const meta = STATUS_META[account.status] || STATUS_META.archived;
+        return `
+        <article class="account-item ${account.is_active ? 'active' : ''}">
+          <div class="account-top">
+            <div>
+              <div class="account-name">${LT.Utils.escape(account.name)}</div>
+              <div class="account-meta">${LT.Utils.escape(account.platform_label || '未设置平台')} · 账号标识 <span class="text-mono">${LT.Utils.escape(account.id)}</span>${account.platform_account_name ? ' · ' + LT.Utils.escape(account.platform_account_name) : ''}</div>
+            </div>
+            <span class="badge ${meta.cls}">${meta.text}</span>
+          </div>
+          <div class="account-facts">
+            <span>数字人形象 ID <span class="text-mono">${LT.Utils.escape(account.avatar_id || '未设置')}</span></span>
+            <span>累计直播 ${account.total_live_sessions || 0} 场 · ${Math.round(account.total_live_minutes || 0)} 分钟</span>
+            <span>预计佣金 ¥${account.total_commission || 0}</span>
+            <span>最近活跃 ${formatStamp(account.last_active_at)}</span>
+          </div>
+          <div class="account-actions">
+            ${account.is_active ? '<span class="badge badge-success"><i class="bi bi-check2"></i>当前账号</span>' : `<button class="btn btn-outline-primary btn-sm" data-action="switch" data-id="${account.id}"><i class="bi bi-arrow-left-right"></i>切换</button>`}
+            <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${account.id}"><i class="bi bi-pencil"></i>编辑</button>
+            <a class="btn btn-outline btn-sm" href="/api/accounts/${encodeURIComponent(account.id)}/export"><i class="bi bi-download"></i>导出</a>
+            ${accounts.length > 1 ? `<button class="btn btn-danger btn-sm" data-action="delete" data-id="${account.id}"><i class="bi bi-trash3"></i>删除</button>` : ''}
+          </div>
+        </article>`;
+      }).join('') : `
+        <div class="empty-state compact">
+          <i class="bi bi-inbox empty-state-icon"></i>
+          <h4>暂无直播账号</h4>
+          <p>在左侧填写账号名称并保存后，账号会出现在这里。</p>
+        </div>`;
+      renderActive(data.active_account);
+    }
+
+    async function refresh() {
+      try { render(await api('/api/accounts')); }
+      catch (error) {
+        $('accountList').innerHTML = `<div class="alert alert-danger">
+          <i class="bi bi-exclamation-triangle"></i>
+          <div class="alert-body">${LT.Utils.escape(error.message)}</div>
+        </div>`;
+        $('activeDetail').innerHTML = '';
+      }
+    }
+
+    $('accountForm').onsubmit = async (event) => {
+      event.preventDefault();
+      const button = $('saveAccount');
+      try {
+        LT.Loading.button(button, true);
+        const data = editingId
+          ? await api('/api/accounts/' + encodeURIComponent(editingId), 'PUT', payload())
+          : await api('/api/accounts', 'POST', payload());
+        if (!editingId) await api('/api/accounts/switch', 'POST', {account_id: data.id});
+        setMessage('账号已保存，正在刷新账号数据。', true);
+        resetForm();
+        await refresh();
+        LT.Nav.loadAccounts();
+      } catch (error) {
+        setMessage(error.message);
+      } finally {
+        LT.Loading.button(button, false);
+      }
+    };
+
+    $('accountList').onclick = async (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const accountId = button.dataset.id;
+      try {
+        if (button.dataset.action === 'edit') {
+          const account = await api('/api/accounts/' + encodeURIComponent(accountId));
+          editAccount(account);
+        } else if (button.dataset.action === 'switch') {
+          await api('/api/accounts/switch', 'POST', {account_id: accountId});
+          window.location.reload();
+        } else if (button.dataset.action === 'delete') {
+          if (!confirm('确定删除这个账号及其运营数据吗？')) return;
+          await api('/api/accounts/' + encodeURIComponent(accountId), 'DELETE');
+          await refresh();
+          LT.Nav.loadAccounts();
+        }
+      } catch (error) { LT.Toast.error('操作失败', error.message); }
+    };
+
+    $('resetForm').onclick = () => { $('accountId').disabled = false; resetForm(); };
+    $('refreshAccounts').onclick = refresh;
+    refresh();
+  </script>
+</body>
+</html>

@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111c35">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>AI 数字人直播工作台 - LiveTalking</title>
+  <link rel="stylesheet" href="common.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="common.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    /* 本页只补 v3 设计系统没有的部分，颜色/间距/圆角全部走 CSS 变量 */
+    .lc-main { padding-bottom: var(--space-8); }
+    .lc-grow { flex: 1 1 220px; min-width: 0; }
+
+    /* 反馈条：空内容时完全收起；有内容时由 JS 换成 .alert */
+    .message { display: none; }
+    .lc-msg { margin: var(--space-3) 0 0; }
+
+    /* 语义色只作用在「模拟结果」的短标签上：正文/清单文字一律不染色。
+       --warning 与 --danger 是给色块、圆点、边框用的，当文字色达不到 AA。
+       SOP 清单的文字色由 .check-item 的 var(--text-secondary) 提供，
+       图标色由 common.css 的 .check-item.ok/.warn/.bad i 负责，不要在这里覆盖。 */
+    .sim-tag.ok { color: var(--success); }
+    .sim-tag.warn { color: var(--warning-strong); }
+    .sim-tag.bad { color: var(--danger-strong); }
+
+    /* 开播准备度 */
+    .readiness {
+      display: flex; align-items: center; gap: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--danger-bg); border-left: 3px solid var(--danger);
+      border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger-fg);
+    }
+    .readiness.ready {
+      border-color: var(--success-bg); border-left-color: var(--success);
+      background: var(--success-bg); color: var(--success-fg);
+    }
+    .readiness-score { font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+    .readiness b { font-size: 14px; display: block; }
+    .readiness .hint { color: inherit; opacity: 0.86; margin-top: 2px; }
+
+    /* 步骤序号（与 v3 .step-no 同款视觉） */
+    .lc-no {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+      background: var(--primary-light); color: var(--primary-dark);
+      font-size: 12px; font-weight: 700;
+    }
+
+    /* 商品库 */
+    .product-layout { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+    .product-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+    .product-list { max-height: 520px; overflow-y: auto; }
+    .product-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-3); margin-bottom: var(--space-2); background: var(--card-bg); }
+    .product-item.current { border-color: var(--primary-border); background: var(--primary-light); }
+    .product-name { font-weight: 620; word-break: break-word; }
+    .product-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.6; }
+    .pill { display: inline-flex; align-items: center; border-radius: var(--radius-pill); padding: 3px 10px; font-size: 11.5px; font-weight: 600; background: var(--primary); color: #fff; white-space: nowrap; }
+
+    /* 运行记录 */
+    .history { max-height: 340px; overflow-y: auto; }
+    .event { padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+    .event:last-child { border-bottom: none; }
+    .event-meta { font-size: 11.5px; color: var(--text-muted); }
+    .event-text { font-size: 13px; color: var(--text-secondary); line-height: 1.55; word-break: break-word; }
+
+    /* 模拟结果 */
+    .sim-row { display: flex; gap: var(--space-2); padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 13px; color: var(--text-secondary); }
+    .sim-row:last-child { border-bottom: none; }
+    .sim-tag { flex: 0 0 76px; font-weight: 600; }
+
+    /* 手机访问地址 */
+    .mobile-access-url {
+      display: block; margin-bottom: var(--space-1); padding: 7px 10px;
+      background: var(--surface-sunken); border: 1px solid var(--border);
+      border-radius: var(--radius-xs); color: var(--primary-dark);
+      font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere;
+    }
+
+    /* 平台直播伴侣配置步骤（顺序列表，不套用 v3 的卡片式 .steps） */
+    .lc-steps { margin: 0; padding-left: 1.5em; font-size: 13.5px; line-height: 1.85; color: var(--text-secondary); }
+    .lc-steps li { margin-bottom: 6px; }
+    .lc-steps li::marker { color: var(--primary); font-weight: 700; }
+  </style>
+  <style id="live-console-responsive">
+    @media (max-width: 992px) {
+      .product-layout { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .lc-main { padding-bottom: var(--space-6); }
+      .product-list { max-height: none; }
+      .readiness { gap: var(--space-3); padding: var(--space-3); }
+      .readiness-score { font-size: 24px; }
+      .history { max-height: 280px; }
+      .tab-nav { margin-bottom: var(--space-3); }
+      .sim-tag { flex-basis: 64px; }
+    }
+    @media (max-width: 480px) {
+      .readiness { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+    }
+  </style>
+</head>
+<body>
+<nav id="lt-nav-container"></nav>
+<main class="container lc-main">
+  <header class="page-heading">
+    <div>
+      <h1 class="page-title"><i class="bi bi-broadcast"></i> AI 数字人直播工作台</h1>
+      <p class="subtitle">视频号 / 抖音窗口采集版 · 输出画面与操作控制完全分离</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" type="button" data-lc-jump="access"><i class="bi bi-phone"></i> 手机访问地址</button>
+      <div id="authBar" class="auth-bar"></div>
+    </div>
+  </header>
+  <div id="authBannerHost"></div>
+
+  <!-- ── 首屏：开播控制 ───────────────────────────────── -->
+  <section class="card">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="lc-grow">
+          <div class="section-heading mb-1"><i class="bi bi-play-circle"></i> 场次控制</div>
+          <p class="hint mt-0">完成商品、输出窗口和开播检查后，由这里统一启动或安全下播。</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button id="preflightLive" class="btn btn-outline" type="button" data-feature="live.start"><i class="bi bi-clipboard-check"></i> 开播预检</button>
+          <button id="startLive" class="btn btn-success" type="button" data-feature="live.start"><i class="bi bi-broadcast"></i> 一键开播</button>
+          <button id="stopLive" class="btn btn-danger" type="button" disabled><i class="bi bi-stop-circle"></i> 安全下播</button>
+        </div>
+      </div>
+      <div id="workflowMessage" class="message"></div>
+    </div>
+  </section>
+
+  <!-- ── 首屏：状态概览 ───────────────────────────────── -->
+  <section class="card">
+    <div class="card-header">
+      <i class="bi bi-speedometer2"></i> 状态概览
+      <span class="card-subtitle ms-auto">自动刷新</span>
+    </div>
+    <div class="card-body">
+      <div class="stat-grid">
+        <div id="statOutput" class="stat-card is-bad">
+          <span class="stat-label"><i class="bi bi-display"></i> 数字人输出</span>
+          <span class="stat-value" id="outputState">未连接</span>
+          <span class="stat-foot">窗口采集画面</span>
+        </div>
+        <div id="statSpeaking" class="stat-card is-info">
+          <span class="stat-label"><i class="bi bi-mic"></i> 说话状态</span>
+          <span class="stat-value" id="speakingState">静音</span>
+          <span class="stat-foot">当前播报</span>
+        </div>
+        <div id="statLlm" class="stat-card is-bad">
+          <span class="stat-label"><i class="bi bi-cpu"></i> 大模型</span>
+          <span class="stat-value" id="llmState">未配置</span>
+          <span class="stat-foot" id="llmDetail">服务商 / 模型待读取</span>
+        </div>
+        <div id="statOcr" class="stat-card is-info">
+          <span class="stat-label"><i class="bi bi-bounding-box"></i> 字幕识别</span>
+          <span class="stat-value" id="ocrState">未启动</span>
+          <span class="stat-foot">屏幕字幕（OCR）</span>
+        </div>
+        <div id="statAuto" class="stat-card is-warn">
+          <span class="stat-label"><i class="bi bi-repeat"></i> 自动话术</span>
+          <span class="stat-value" id="autoState">已暂停</span>
+          <span class="stat-foot">循环播报话术</span>
+        </div>
+        <div id="statProduct" class="stat-card is-warn">
+          <span class="stat-label"><i class="bi bi-box-seam"></i> 当前商品</span>
+          <span class="stat-value" id="productState">未选择</span>
+          <span class="stat-foot">正在讲解的商品</span>
+        </div>
+        <div id="statReadiness" class="stat-card is-bad">
+          <span class="stat-label"><i class="bi bi-clipboard-check"></i> 开播准备度</span>
+          <span class="stat-value" id="readinessState">0%</span>
+          <span class="stat-foot">必做项完成率</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 分区标签：首屏之下不再平铺 ───────────────────── -->
+  <div class="tab-nav" role="tablist" aria-label="工作台分区">
+    <button class="tab-btn active" type="button" role="tab" id="lcTabCheck" data-lc-tab="check" aria-controls="lcPanelCheck" aria-selected="true"><i class="bi bi-clipboard-check"></i> 开播检查</button>
+    <button class="tab-btn" type="button" role="tab" id="lcTabSteps" data-lc-tab="steps" aria-controls="lcPanelSteps" aria-selected="false"><i class="bi bi-list-ol"></i> 操作步骤 1-6</button>
+    <button class="tab-btn" type="button" role="tab" id="lcTabProducts" data-lc-tab="products" aria-controls="lcPanelProducts" aria-selected="false"><i class="bi bi-box-seam"></i> 商品库</button>
+    <button class="tab-btn" type="button" role="tab" id="lcTabAccess" data-lc-tab="access" aria-controls="lcPanelAccess" aria-selected="false"><i class="bi bi-phone"></i> 接入与帮助</button>
+  </div>
+
+  <!-- ── 分区一：开播检查 ─────────────────────────────── -->
+  <div class="tab-panel active" id="lcPanelCheck" data-lc-panel="check" role="tabpanel" aria-labelledby="lcTabCheck">
+    <section class="card">
+      <div class="card-header">
+        <i class="bi bi-clipboard-check"></i> 开播检查
+        <span class="card-subtitle ms-auto">与上方状态概览重复的项目不再重复显示</span>
+      </div>
+      <div class="card-body">
+        <div id="readinessPanel" class="readiness">
+          <div id="readinessScore" class="readiness-score">0%</div>
+          <div>
+            <b id="readinessTitle">尚未具备开播条件</b>
+            <div id="readinessSummary" class="hint">请按下方提示完成准备。</div>
+          </div>
+        </div>
+
+        <div class="section-heading mt-4"><i class="bi bi-check2-square"></i> 人工确认项</div>
+        <div class="grid-2" id="workflowManual" data-feature-lock="live.settings">
+          <label class="form-check"><input type="checkbox" data-workflow="permissions_confirmed"><span class="form-check-label">达人带货、直播和类目权限已确认</span></label>
+          <label class="form-check"><input type="checkbox" data-workflow="product_card_matched"><span class="form-check-label">工作台商品编号、价格、优惠与平台商品卡一致</span></label>
+          <label class="form-check"><input type="checkbox" data-workflow="platform_product_attached"><span class="form-check-label">当前商品已经挂到直播间</span></label>
+          <label class="form-check"><input type="checkbox" data-workflow="audio_video_checked"><span class="form-check-label">画面、声音、口型和直播工具音频电平已检查</span></label>
+          <label class="form-check"><input type="checkbox" data-workflow="private_rehearsal_done"><span class="form-check-label">已完成至少 1 分钟私密 / 本地彩排</span></label>
+          <label class="form-check"><input type="checkbox" data-workflow="human_supervisor_ready"><span class="form-check-label">真人值守人员和紧急接管操作已就绪</span></label>
+          <label class="form-check"><input type="checkbox" data-workflow="supervision_visible"><span class="form-check-label">值守痕迹可观测：开播中真人实时读评论并回应</span></label>
+          <label class="form-check"><input type="checkbox" data-workflow="category_qualified"><span class="form-check-label">百货各子类目所需资质／备案已逐项核对</span></label>
+        </div>
+
+        <div class="section-heading mt-4"><i class="bi bi-magic"></i> 系统自动检查（仅列未完成项）</div>
+        <p class="hint mt-0">红色项目必须完成；橙色项目不会阻止基础开播，但会影响智能答疑或降低挂品准确性。</p>
+        <div id="workflowChecks" class="checklist"><div class="hint">正在读取状态…</div></div>
+      </div>
+      <div class="card-footer">
+        <button id="saveWorkflow" class="btn btn-primary" type="button" data-feature="live.settings"><i class="bi bi-save"></i> 保存人工检查项</button>
+        <a class="btn btn-outline" href="/affiliate_tutorial.html" target="_blank" rel="noopener"><i class="bi bi-book"></i> 打开完整教程</a>
+        <a class="btn btn-outline" href="/api/live/export" data-feature="export"><i class="bi bi-download"></i> 备份运营配置</a>
+        <button id="resetWorkflow" class="btn btn-soft-danger ms-auto" type="button" data-feature="live.settings"><i class="bi bi-arrow-counterclockwise"></i> 开始新场次并重置</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <i class="bi bi-clock-history"></i> 运行记录
+        <span class="card-subtitle ms-auto">最近 30 条</span>
+      </div>
+      <div class="card-body">
+        <div id="history" class="history"><div class="hint">暂无记录</div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── 分区二：操作步骤（单列纵向 1 → 6，DOM 顺序与视觉顺序一致） ── -->
+  <div class="tab-panel" id="lcPanelSteps" data-lc-panel="steps" role="tabpanel" aria-labelledby="lcTabSteps">
+    <section class="card">
+      <div class="card-header"><span class="lc-no">1</span> 打开直播输出</div>
+      <div class="card-body">
+        <div class="alert alert-warning">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>当前未检测到 OBS 或官方「直播伴侣」。请先打开下方 9:16 输出窗口，再在视频号 / 抖音官方直播工具中添加「窗口采集」和「系统 / 应用音频」。</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="avatarId">数字人形象 ID</label>
+          <input class="form-control text-mono" id="avatarId" value="wav2lip256_avatar1" spellcheck="false" autocomplete="off" data-feature="avatar.connect">
+          <div class="form-hint">数字人形象 ID 为系统标识符（例如 <span class="text-mono">wav2lip256_avatar1</span>），请原样保留；可在「数字人形象」页面创建并切换其它形象。</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button id="openOutput" class="btn btn-secondary" type="button" data-feature="avatar.connect"><i class="bi bi-camera-video"></i> 打开 9:16 直播输出窗口</button>
+          <button id="openOutputWide" class="btn btn-outline" type="button" data-feature="avatar.connect"><i class="bi bi-arrows-fullscreen"></i> 打开横屏输出</button>
+        </div>
+        <p class="hint">输出窗口中必须手动点击一次「启动直播画面」，浏览器才允许播放声音。</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><span class="lc-no">2</span> 直播画面设置</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="platform">平台预设</label>
+            <select class="form-select" id="platform" data-feature="live.settings"><option value="douyin">抖音直播</option><option value="wechat_channels">微信视频号</option><option value="other">其他平台</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="layout">人物布局</label>
+            <select class="form-select" id="layout" data-feature="live.settings"><option value="contain">完整人物 + 模糊背景</option><option value="cover">铺满裁切</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="liveTitle">直播间标题</label>
+          <input class="form-control" id="liveTitle" value="AI 数字人直播间" data-feature="live.settings">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="aiLabel">AI 标识</label>
+          <input class="form-control" id="aiLabel" value="AI 数字人 · 内容由人工值守" data-feature="live.settings">
+        </div>
+        <div class="form-actions">
+          <button id="saveSettings" class="btn btn-secondary" type="button" data-feature="live.settings"><i class="bi bi-save"></i> 保存画面设置</button>
+        </div>
+        <div id="settingsMessage" class="message"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><span class="lc-no">3</span> 人工插话与接管</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label" for="manualText">立即播报或交给大模型回答</label>
+          <textarea class="form-control" id="manualText" placeholder="输入要让数字人说的话，或输入一个问题交给大模型回答" data-feature="speak.manual"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="manualMode">发送方式</label>
+            <select class="form-select" id="manualMode" data-feature="speak.manual"><option value="echo">直接播报</option><option value="chat">大模型回答</option></select>
+          </div>
+          <div class="form-group">
+            <span class="form-label">播报设置</span>
+            <label class="form-switch"><input id="manualInterrupt" type="checkbox" checked data-feature="speak.manual"><span>打断当前内容</span></label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button id="sendManual" class="btn btn-primary" type="button" data-feature="speak.manual"><i class="bi bi-send"></i> 立即发送</button>
+          <button id="interrupt" class="btn btn-outline" type="button"><i class="bi bi-hand-index-thumb"></i> 仅打断播报</button>
+          <button id="emergency" class="btn btn-danger ms-auto" type="button"><i class="bi bi-exclamation-octagon"></i> 紧急停止自动内容</button>
+        </div>
+        <div id="manualMessage" class="message"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><span class="lc-no">4</span> 自动直播话术</div>
+      <div class="card-body">
+        <p class="hint mt-0">每行一条。数字人空闲时按顺序播报；字幕识别正在回答时会自动让路。</p>
+        <div class="form-group">
+          <label class="form-label" for="scripts">话术列表（每行一条）</label>
+          <textarea class="form-control" id="scripts" rows="9" placeholder="大家好，欢迎来到直播间。&#10;今天为大家介绍我们的产品。&#10;有问题可以留言，我会为你解答。" data-feature="scripts.edit"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="scriptGap">两条间隔（秒）</label>
+            <input class="form-control" id="scriptGap" type="number" min="3" max="300" value="30" data-feature="scripts.edit">
+            <p class="hint mt-0">防录播：循环播放时间隔不足 15 秒会自动上浮到 15 秒，且每次间隔带随机抖动。</p>
+          </div>
+          <div class="form-group">
+            <span class="form-label">播放方式</span>
+            <label class="form-switch"><input id="repeatScripts" type="checkbox" checked data-feature="scripts.edit"><span>循环播放</span></label>
+            <label class="form-switch"><input id="shuffleScripts" type="checkbox" checked data-feature="scripts.edit"><span>打乱话术顺序（防录播）</span></label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button id="saveScripts" class="btn btn-outline" type="button" data-feature="scripts.edit"><i class="bi bi-save"></i> 保存话术</button>
+          <button id="startAuto" class="btn btn-success" type="button" data-feature="autopilot"><i class="bi bi-play-fill"></i> 启动自动话术</button>
+          <button id="stopAuto" class="btn btn-secondary" type="button" data-feature="autopilot"><i class="bi bi-pause-fill"></i> 暂停自动话术</button>
+        </div>
+        <div id="scriptMessage" class="message"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><span class="lc-no">5</span> 智能回应与本地录制</div>
+      <div class="card-body">
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="btn btn-outline" href="/llm.html" target="_blank" rel="noopener" data-feature="llm.config"><i class="bi bi-cpu"></i> 配置 / 更换大模型</a>
+          <a class="btn btn-outline" href="/subtitle.html" target="_blank" rel="noopener" data-feature="subtitle"><i class="bi bi-bounding-box"></i> 框选字幕自动回应</a>
+          <button id="startRecord" class="btn btn-secondary" type="button" data-feature="record"><i class="bi bi-record-circle"></i> 开始本地录制</button>
+          <button id="stopRecord" class="btn btn-outline" type="button" data-feature="record"><i class="bi bi-stop-circle"></i> 停止录制</button>
+        </div>
+        <p class="hint">正式开播前先录制 1 分钟测试，检查画面、声音、口型、字幕区域和敏感词。</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><span class="lc-no">6</span> 模拟评论测试</div>
+      <div class="card-body">
+        <p class="hint mt-0">不用开播、不用框选屏幕，输入一句观众评论就能看到：系统走哪条链路、会说什么、断网时能不能播。用于开播前自检、录演示视频和现场演示。</p>
+        <div class="form-group">
+          <label class="form-label" for="simText">观众评论</label>
+          <textarea class="form-control" id="simText" rows="3" placeholder="例：多少钱一斤？"></textarea>
+        </div>
+        <div class="chip-group mb-2">
+          <button class="chip" type="button" data-sim="多少钱一斤？">价格</button>
+          <button class="chip" type="button" data-sim="几斤装？">规格</button>
+          <button class="chip" type="button" data-sim="坏了怎么办？">售后</button>
+          <button class="chip" type="button" data-sim="今天天气怎么样？">未命中示例</button>
+        </div>
+        <label class="form-switch"><input id="simSpeak" type="checkbox" checked data-feature="avatar.connect"><span>同时让数字人播报（需已连接输出窗口）</span></label>
+        <div class="form-actions">
+          <button id="runSim" class="btn btn-secondary" type="button"><i class="bi bi-play-circle"></i> 模拟一条评论</button>
+          <button id="clearSim" class="btn btn-outline" type="button"><i class="bi bi-eraser"></i> 清空结果</button>
+        </div>
+        <div id="simResult" class="panel mt-3">尚未测试。</div>
+        <div id="simMessage" class="message"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── 分区三：商品库 ───────────────────────────────── -->
+  <div class="tab-panel" id="lcPanelProducts" data-lc-panel="products" role="tabpanel" aria-labelledby="lcTabProducts">
+    <section class="card">
+      <div class="card-header"><i class="bi bi-box-seam"></i> 达人带货商品库</div>
+      <div class="card-body">
+        <div class="alert alert-info">
+          <i class="bi bi-shield-lock"></i>
+          <span>佣金仅供后台运营查看，不会传给大模型或数字人口播。只有「信息已核对 + 素材已授权」的商品才能进入自动讲品。</span>
+        </div>
+        <div class="product-layout">
+          <div data-feature-lock="product.write">
+            <input id="productId" type="hidden">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="productName">商品名称 <span class="req">*</span></label>
+                <input class="form-control" id="productName" placeholder="例：XX 保温杯">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="platformProductId">平台商品 ID</label>
+                <input class="form-control text-mono" id="platformProductId" placeholder="抖音 / 视频号商品 ID">
+              </div>
+            </div>
+            <div class="grid-4">
+              <div class="form-group">
+                <label class="form-label" for="productPrice">已核对价格</label>
+                <input class="form-control" id="productPrice" placeholder="例：到手价 59 元">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="productCoupon">优惠信息</label>
+                <input class="form-control" id="productCoupon" placeholder="例：商品卡领 10 元券">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="commissionRate">佣金率（内部）</label>
+                <input class="form-control" id="commissionRate" placeholder="例：20%">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="commissionAmount">预估佣金（内部）</label>
+                <input class="form-control" id="commissionAmount" placeholder="例：12 元 / 单">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sellingPoints">已核对卖点（每行一条）</label>
+              <textarea class="form-control" id="sellingPoints" rows="4" placeholder="容量为 500 毫升&#10;杯盖可拆洗&#10;产品材质以商品卡参数为准"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="targetAudience">适用人群</label>
+                <input class="form-control" id="targetAudience" placeholder="例：通勤、上学和日常饮水人群">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="productUsage">使用说明</label>
+                <input class="form-control" id="productUsage" placeholder="例：首次使用前按说明清洗">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="productNotes">补充说明 / 售后边界</label>
+              <input class="form-control" id="productNotes" placeholder="无法确认的内容让观众咨询商品卡客服">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="forbiddenTerms">该商品禁用词（每行一条）</label>
+              <textarea class="form-control" id="forbiddenTerms" rows="2" placeholder="治疗失眠&#10;永久保温"></textarea>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title"><i class="bi bi-check2-square"></i> 合规确认</div>
+              <label class="form-check"><input id="productVerified" type="checkbox"><span class="form-check-label">价格、优惠和卖点已与商品卡核对</span></label>
+              <label class="form-check"><input id="materialAuthorized" type="checkbox"><span class="form-check-label">商品素材和推广权限已授权</span></label>
+              <label class="form-check"><input id="productEnabled" type="checkbox" checked><span class="form-check-label">启用商品</span></label>
+            </div>
+
+            <div class="form-actions">
+              <button id="saveProduct" class="btn btn-primary" type="button"><i class="bi bi-save"></i> 保存商品</button>
+              <button id="resetProduct" class="btn btn-outline" type="button"><i class="bi bi-eraser"></i> 清空表单</button>
+            </div>
+            <div id="productMessage" class="message"></div>
+
+            <div class="divider"></div>
+            <div class="panel">
+              <div class="panel-title"><i class="bi bi-exclamation-triangle"></i> 直播中的高风险操作</div>
+              <p class="hint mt-0">切换下一件会立即改变正在讲解的商品，请先确认直播间商品卡已同步。</p>
+              <button id="nextProduct" class="btn btn-secondary" type="button"><i class="bi bi-skip-forward"></i> 切换下一件可用商品</button>
+            </div>
+          </div>
+          <div>
+            <div class="panel">
+              <div class="panel-title"><i class="bi bi-list-ul"></i> 已保存商品</div>
+              <div id="productSummary" class="hint mb-2">尚未添加商品</div>
+              <div id="productList" class="product-list"><div class="hint">暂无商品</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── 分区四：接入与帮助 ───────────────────────────── -->
+  <div class="tab-panel" id="lcPanelAccess" data-lc-panel="access" role="tabpanel" aria-labelledby="lcTabAccess">
+    <section id="mobileAccessCard" class="card" aria-live="polite">
+      <div class="card-header"><i class="bi bi-phone"></i> 手机 / 电脑双端访问</div>
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <div class="lc-grow">
+            <code id="mobileAccessUrl" class="mobile-access-url">正在获取局域网访问地址...</code>
+            <div id="mobileAccessHint" class="hint">手机与电脑连接同一 Wi-Fi 后，打开上方地址即可使用同一套工作台。</div>
+          </div>
+          <button id="copyMobileUrl" class="btn btn-outline" type="button"><i class="bi bi-copy"></i> 复制地址</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><i class="bi bi-display"></i> 平台直播伴侣中的最后配置</div>
+      <div class="card-body">
+        <ol class="lc-steps">
+          <li>登录视频号或抖音官方直播工具，确认账号已取得开播权限。</li>
+          <li>直播画布选择竖屏 1080×1920（横屏内容则选 1920×1080），帧率 25 或 30。</li>
+          <li>添加「窗口采集」，选择标题为「AI 数字人直播输出」的窗口；不要采集本控制台。</li>
+          <li>启用系统音频或应用音频采集，确认电平表会随数字人说话跳动。</li>
+          <li>画面中保留「AI 数字人」与 LiveTalking 标识，添加人工联系方式和必要商品信息。</li>
+          <li>先进行私密 / 测试直播，人工确认无回声、无重复回应后再公开开播。</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="card" data-hide-without="competition.view">
+      <div class="card-header"><i class="bi bi-trophy"></i> 参赛与项目材料</div>
+      <div class="card-body">
+        <a class="btn btn-outline" href="/competition_ai_digital_human.html"><i class="bi bi-trophy"></i> 参赛项目展示与演示说明</a>
+        <p class="hint">查看项目定位、演示流程与材料清单。</p>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+LT.Nav.current = 'live_console';
+LT.Nav.inject('#lt-nav-container');
+const $=id=>document.getElementById(id);let latest=null,workflowDirty=false;
+async function api(url,method='GET',body){const response=await fetch(url,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const data=await response.json();if(data.code!==0)throw new Error(data.msg);return data.data}
+
+/* ── 提示条：空内容时收起，有内容时用 v3 .alert 保证对比度 ── */
+function setMessage(id,text,ok=false){const el=$(id);if(!el)return;el.textContent=text||'';el.className=text?('alert lc-msg '+(ok?'alert-success':'alert-danger')):'message'}
+function msg(id,text,ok=false){setMessage(id,text,ok)}
+function workflowMsg(text,ok=false){setMessage('workflowMessage',text,ok)}
+
+/* ── 状态概览卡：数值 + 左侧色条 ── */
+const STAT_TONE={good:'is-good',warn:'is-warn',bad:'is-bad',info:'is-info'};
+function setStat(cardId,valueId,text,tone){const card=$(cardId);if(card)card.className='stat-card '+(STAT_TONE[tone]||'is-info');const value=$(valueId);if(value)value.textContent=text}
+
+/* ── 分区标签页 ── */
+function activateTab(name,scroll){document.querySelectorAll('[data-lc-tab]').forEach(btn=>{const on=btn.dataset.lcTab===name;btn.classList.toggle('active',on);btn.setAttribute('aria-selected',on?'true':'false')});document.querySelectorAll('[data-lc-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.lcPanel===name));if(scroll)window.scrollTo({top:0,behavior:'smooth'})}
+document.querySelectorAll('[data-lc-tab]').forEach(btn=>{btn.onclick=()=>activateTab(btn.dataset.lcTab,false)});
+document.querySelectorAll('[data-lc-jump]').forEach(btn=>{btn.onclick=()=>activateTab(btn.dataset.lcJump,true)});
+
+/* ── 场次控制 ── */
+async function runPreflight(){const button=$('preflightLive');try{LT.Loading.button(button,true);const result=await api('/api/workflow/preflight');if(result.ready){workflowMsg(`预检通过：${result.passed}/${result.total} 项检查完成，可以开播。`,true)}else{const blockers=(result.blockers||[]).map(item=>item.label).join('、');workflowMsg(`预检未通过：${blockers||'请查看检查结果'}。`)}refresh()}catch(e){LT.Toast.error('预检失败',e.message)}finally{LT.Loading.button(button,false)}}
+async function startLive(){const button=$('startLive');try{LT.Loading.button(button,true);const result=await api('/api/workflow/start','POST',{play_mode:'loop',atmosphere_interval:180});if(result.success){workflowMsg('一键开播成功，自动内容与场次记录已启动。',true)}else{workflowMsg('开播未完成：'+(result.error||'请检查工作台状态'))}refresh()}catch(e){LT.Toast.error('开播失败',e.message)}finally{LT.Loading.button(button,false)}}
+async function stopLive(){const button=$('stopLive');try{LT.Loading.button(button,true);const result=await api('/api/workflow/stop','POST',{});workflowMsg(result.success?'已安全下播，自动模块已关闭。':'下播完成，但有部分步骤需要复核。',result.success);refresh()}catch(e){LT.Toast.error('下播失败',e.message)}finally{LT.Loading.button(button,false)}}
+$('preflightLive').onclick=runPreflight;$('startLive').onclick=startLive;$('stopLive').onclick=stopLive;
+
+/* ── 直播输出 ── */
+function outputWindow(wide=false){const avatar=encodeURIComponent($('avatarId').value.trim());const features=wide?'popup,width=1180,height=720':'popup,width=620,height=1080';const win=window.open('/live_output.html?avatar='+avatar,'AILiveOutput',features);if(!win)LT.Toast.warning('浏览器阻止了弹窗，请允许本站弹窗后重试')}
+$('openOutput').onclick=()=>outputWindow(false);$('openOutputWide').onclick=()=>outputWindow(true);
+function lines(id){return $(id).value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
+
+/* ── 商品库 ── */
+function resetProductForm(){['productId','productName','platformProductId','productPrice','productCoupon','commissionRate','commissionAmount','sellingPoints','targetAudience','productUsage','productNotes','forbiddenTerms'].forEach(id=>$(id).value='');$('productVerified').checked=false;$('materialAuthorized').checked=false;$('productEnabled').checked=true;msg('productMessage','')}
+function productPayload(){return{id:$('productId').value.trim(),name:$('productName').value.trim(),platform_product_id:$('platformProductId').value.trim(),price:$('productPrice').value.trim(),coupon:$('productCoupon').value.trim(),commission_rate:$('commissionRate').value.trim(),commission_amount:$('commissionAmount').value.trim(),selling_points:lines('sellingPoints'),target_audience:$('targetAudience').value.trim(),usage:$('productUsage').value.trim(),notes:$('productNotes').value.trim(),forbidden_terms:lines('forbiddenTerms'),verified:$('productVerified').checked,material_authorized:$('materialAuthorized').checked,enabled:$('productEnabled').checked}}
+function editProduct(product){$('productId').value=product.id;$('productName').value=product.name;$('platformProductId').value=product.platform_product_id||'';$('productPrice').value=product.price||'';$('productCoupon').value=product.coupon||'';$('commissionRate').value=product.commission_rate||'';$('commissionAmount').value=product.commission_amount||'';$('sellingPoints').value=(product.selling_points||[]).join('\n');$('targetAudience').value=product.target_audience||'';$('productUsage').value=product.usage||'';$('productNotes').value=product.notes||'';$('forbiddenTerms').value=(product.forbidden_terms||[]).join('\n');$('productVerified').checked=product.verified;$('materialAuthorized').checked=product.material_authorized;$('productEnabled').checked=product.enabled;window.scrollTo({top:$('productName').getBoundingClientRect().top+window.scrollY-30,behavior:'smooth'})}
+function renderProducts(sales){const list=$('productList');list.innerHTML='';$('productSummary').textContent=`共 ${sales.products.length} 件，${sales.ready_count} 件可自动讲解`;if(!sales.products.length){list.innerHTML='<div class="hint">暂无商品，请先在左侧录入达人选品信息。</div>';return}sales.products.forEach(product=>{const item=document.createElement('div');item.className='product-item '+(product.id===sales.current_product_id?'current':'');const head=document.createElement('div');head.className='product-head';const info=document.createElement('div');const name=document.createElement('div');name.className='product-name';name.textContent=product.name;const meta=document.createElement('div');meta.className='product-meta text-break';if(product.platform_product_id){meta.append(document.createTextNode('平台商品 ID：'));const idText=document.createElement('span');idText.className='text-mono';idText.textContent=product.platform_product_id;idText.title=product.platform_product_id;meta.append(idText)}const rest=[product.price,product.coupon,product.commission_rate&&('内部佣金率 '+product.commission_rate),product.commission_amount&&('预估佣金 '+product.commission_amount)].filter(Boolean);if(rest.length){if(product.platform_product_id)meta.append(document.createTextNode(' · '));meta.append(document.createTextNode(rest.join(' · ')))}if(!product.platform_product_id&&!rest.length)meta.textContent='尚未填写价格和佣金信息';info.append(name,meta);head.append(info);if(product.id===sales.current_product_id){const pill=document.createElement('span');pill.className='pill';pill.textContent='当前讲品';head.append(pill)}const readiness=document.createElement('div');readiness.className='product-meta';readiness.textContent=`信息核对：${product.verified?'是':'否'} · 素材授权：${product.material_authorized?'是':'否'} · 状态：${product.enabled?'已启用':'已停用'}`;const actions=document.createElement('div');actions.className='d-flex gap-2 flex-wrap mt-2';[['edit','编辑','btn btn-outline'],['current','设为当前商品','btn btn-secondary'],['scripts','生成并应用话术','btn btn-outline'],['delete','删除','btn btn-soft-danger']].forEach(([action,label,style])=>{const button=document.createElement('button');button.type='button';button.dataset.action=action;button.dataset.id=product.id;button.className=style;button.textContent=label;actions.append(button)});item.append(head,readiness,actions);list.append(item)})}
+$('saveProduct').onclick=async()=>{const btn=$('saveProduct');try{LT.Loading.button(btn,true);await api('/api/live/products','POST',productPayload());resetProductForm();msg('productMessage','商品已保存。佣金只保存在运营后台。',true);refresh()}catch(e){LT.Toast.error(e.message)}finally{LT.Loading.button(btn,false)}};
+$('resetProduct').onclick=resetProductForm;
+$('nextProduct').onclick=async()=>{const btn=$('nextProduct');try{LT.Loading.button(btn,true);const sales=await api('/api/live/products/next','POST',{});msg('productMessage','已切换到：'+sales.current_product.name,true);refresh()}catch(e){LT.Toast.error(e.message)}finally{LT.Loading.button(btn,false)}};
+$('productList').onclick=async event=>{const button=event.target.closest('button[data-action]');if(!button||!latest)return;const product=latest.sales.products.find(item=>item.id===button.dataset.id);if(!product)return;try{if(button.dataset.action==='edit'){editProduct(product);return}if(button.dataset.action==='delete'){if(!confirm('确定删除商品"'+product.name+'"吗？'))return;await api('/api/live/products/'+encodeURIComponent(product.id),'DELETE');msg('productMessage','商品已删除。',true)}else if(button.dataset.action==='current'){await api('/api/live/products/current','POST',{id:product.id});msg('productMessage','当前讲解商品已切换为：'+product.name,true)}else if(button.dataset.action==='scripts'){const result=await api('/api/live/products/scripts','POST',{id:product.id,apply:true});$('scripts').value=result.scripts.join('\n');msg('productMessage',`已生成并应用 ${result.scripts.length} 条合规话术。`,true);msg('scriptMessage','商品话术已写入自动话术队列，请先彩排再启动。',true)}refresh()}catch(e){LT.Toast.error(e.message)}};
+
+/* ── 开播检查 ── */
+const manualWorkflowKeys=new Set(['permissions_confirmed','product_card_matched','platform_product_attached','audio_video_checked','private_rehearsal_done','human_supervisor_ready','supervision_visible','category_qualified']);
+const duplicatedCheckKeys=new Set(['output','llm','current_product']);
+$('workflowManual').onchange=()=>{workflowDirty=true;msg('workflowMessage','检查项已修改，请点击保存。')};
+function workflowPayload(){const payload={};document.querySelectorAll('[data-workflow]').forEach(input=>payload[input.dataset.workflow]=input.checked);return payload}
+$('saveWorkflow').onclick=async()=>{const btn=$('saveWorkflow');try{LT.Loading.button(btn,true);await api('/api/live/workflow','POST',workflowPayload());workflowDirty=false;msg('workflowMessage','人工检查项已保存。',true);refresh()}catch(e){LT.Toast.error(e.message)}finally{LT.Loading.button(btn,false)}};
+$('resetWorkflow').onclick=async()=>{if(!confirm('开始新场次会保留达人权限确认，但清除挂品、音视频、彩排、值守、类目资质和防录播确认。确定继续吗？'))return;try{await api('/api/live/workflow','POST',{reset_session:true});workflowDirty=false;msg('workflowMessage','新场次检查项已重置。',true);refresh()}catch(e){LT.Toast.error(e.message)}};
+function renderWorkflow(workflow){const ready=workflow.ready;$('readinessPanel').className='readiness '+(ready?'ready':'');$('readinessScore').textContent=workflow.score+'%';$('readinessTitle').textContent=ready?'已满足系统开播条件':'尚有必做项未完成';$('readinessSummary').textContent=ready?(workflow.warnings.length?`可以进入平台最终确认，另有 ${workflow.warnings.length} 项建议优化。`:'所有必做项和建议项均已完成。'):`已完成 ${workflow.required_passed}/${workflow.required_total} 项必做检查，还有 ${workflow.blockers.length} 项阻塞。`;if(!workflowDirty){document.querySelectorAll('[data-workflow]').forEach(input=>input.checked=Boolean(workflow.manual_checks[input.dataset.workflow]))}const list=$('workflowChecks');list.innerHTML='';const pending=workflow.checks.filter(item=>!manualWorkflowKeys.has(item.key)&&!duplicatedCheckKeys.has(item.key)&&item.level!=='optional'&&!item.passed);if(!pending.length){const done=document.createElement('div');done.className='check-item ok';const doneIcon=document.createElement('i');doneIcon.className='bi bi-check-circle-fill';done.append(doneIcon,document.createTextNode('自动检查项全部通过，可以进入平台最终确认。'));list.append(done);return}pending.forEach(item=>{const blocking=item.level!=='warning';const row=document.createElement('div');row.className='check-item '+(blocking?'bad':'warn');const icon=document.createElement('i');icon.className='bi '+(blocking?'bi-x-circle-fill':'bi-exclamation-triangle-fill');const body=document.createElement('div');const title=document.createElement('div');title.className='fw-bold';title.textContent=item.label;body.append(title);if(item.action){const action=document.createElement('div');action.className='text-muted fs-xs';action.textContent='处理：'+item.action;body.append(action)}row.append(icon,body);list.append(row)})}
+
+/* ── 画面设置与话术 ── */
+async function saveSettings(){try{await api('/api/live/settings','POST',{platform:$('platform').value,title:$('liveTitle').value,ai_label:$('aiLabel').value,layout:$('layout').value,script_gap_seconds:Number($('scriptGap').value),repeat_scripts:$('repeatScripts').checked,shuffle_scripts:$('shuffleScripts').checked});msg('settingsMessage','设置已保存并同步到输出窗口。',true)}catch(e){LT.Toast.error(e.message)}}
+$('saveSettings').onclick=async()=>{const btn=$('saveSettings');LT.Loading.button(btn,true);try{await saveSettings()}finally{LT.Loading.button(btn,false)}};
+$('saveScripts').onclick=async()=>{const btn=$('saveScripts');try{LT.Loading.button(btn,true);const scripts=$('scripts').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);await saveSettings();await api('/api/live/scripts','PUT',{scripts,repeat:$('repeatScripts').checked});msg('scriptMessage',`已保存 ${scripts.length} 条话术。`,true);refresh()}catch(e){LT.Toast.error(e.message)}finally{LT.Loading.button(btn,false)}};
+$('startAuto').onclick=async()=>{try{await api('/api/live/autopilot','POST',{enabled:true});msg('scriptMessage','自动话术已启动。',true);refresh()}catch(e){LT.Toast.error(e.message)}};
+$('stopAuto').onclick=async()=>{try{await api('/api/live/autopilot','POST',{enabled:false});msg('scriptMessage','自动话术已暂停。',true);refresh()}catch(e){LT.Toast.error(e.message)}};
+
+/* ── 人工接管与录制 ── */
+$('sendManual').onclick=async()=>{try{await api('/api/live/speak','POST',{text:$('manualText').value,mode:$('manualMode').value,interrupt:$('manualInterrupt').checked});msg('manualMessage','已发送。',true);$('manualText').value='';refresh()}catch(e){LT.Toast.error(e.message)}};
+$('interrupt').onclick=async()=>{try{await api('/api/live/interrupt','POST',{});msg('manualMessage','已打断当前播报。',true)}catch(e){LT.Toast.error(e.message)}};
+$('emergency').onclick=async()=>{if(!confirm('确定停止自动话术、字幕回应并打断当前播报吗？'))return;try{await api('/api/live/emergency-stop','POST',{});msg('manualMessage','紧急停止已执行。',true);refresh()}catch(e){LT.Toast.error(e.message)}};
+$('startRecord').onclick=()=>recording('start');$('stopRecord').onclick=()=>recording('stop');async function recording(action){try{await api('/api/live/recording','POST',{action});msg('manualMessage',action==='start'?'已开始录制。':'录制已停止并保存。',true);refresh()}catch(e){LT.Toast.error('录制失败：'+e.message)}}
+
+/* ── 模拟评论测试 ── */
+function simRow(label,value,cls){const row=document.createElement('div');row.className='sim-row';const tag=document.createElement('b');tag.className='sim-tag'+(cls?' '+cls:'');tag.textContent=label;row.append(tag,document.createTextNode(value===undefined?'':value));return row}
+function renderSim(result){const box=$('simResult');box.className='panel mt-3';box.innerHTML='';const cls=result.route==='intent'?'ok':(result.route==='llm'?'warn':'bad');const head=result.route_label+(result.intent_label?' · '+result.intent_label:'')+(result.keyword?' · 命中词「'+result.keyword+'」':'');box.append(simRow('判定链路',head,cls));box.append(simRow('将播报',result.response||'（无）'));box.append(simRow('离线可播',result.offline_ready?'是（已预热，断网也能播）':'否（未预热，断网时播不出来）'));box.append(simRow('商品',(result.product||'未选择当前商品')+' · 已播报：'+(result.spoken?'是':'否')+' · 判定耗时：'+result.elapsed_ms+' 毫秒'));if(result.note)box.append(simRow('备注',result.note))}
+document.querySelectorAll('[data-sim]').forEach(button=>{button.onclick=()=>{$('simText').value=button.dataset.sim;msg('simMessage','')}});
+$('clearSim').onclick=()=>{$('simResult').className='panel mt-3';$('simResult').textContent='尚未测试。';msg('simMessage','')};
+$('runSim').onclick=async()=>{const button=$('runSim');const text=$('simText').value.trim();if(!text){LT.Toast.warning('请先输入一句观众评论');return}try{LT.Loading.button(button,true);const result=await api('/api/live/simulate','POST',{text,speak:$('simSpeak').checked});renderSim(result);msg('simMessage',result.spoken?'已按 '+result.route_label+' 播报':(result.response?'仅判定，未播报':'未生成应答'),true);refresh()}catch(e){LT.Toast.error('模拟失败',e.message)}finally{LT.Loading.button(button,false)}};
+
+/* ── 运行记录 ── */
+const HISTORY_TYPE_LABELS={state:'场次状态',system:'系统连接',settings:'画面设置',scripts:'话术队列',autopilot:'自动话术',question:'观众提问',manual:'人工插播',simulate:'评论模拟',answer:'模型应答',error:'异常',operator:'人工接管',emergency:'紧急停止',record:'本地录制',product:'商品库','product-scripts':'商品话术',workflow:'开播检查',playqueue:'排品轮播',atmosphere:'氛围管理'};
+function renderHistory(items){const box=$('history');box.innerHTML='';if(!items.length){box.innerHTML='<div class="hint">暂无记录</div>';return}items.slice(0,30).forEach(item=>{const row=document.createElement('div');row.className='event';const meta=document.createElement('div');meta.className='event-meta';meta.append(document.createTextNode(new Date(item.time*1000).toLocaleTimeString()+' · '+(HISTORY_TYPE_LABELS[item.type]||'其它事件')+' · '));const typeTag=document.createElement('span');typeTag.className='text-mono';typeTag.textContent=item.type;typeTag.title='系统事件标识：'+item.type;meta.append(typeTag);const text=document.createElement('div');text.className='event-text'+(item.status==='error'?' text-danger':'');text.textContent=item.text;row.append(meta,text);box.appendChild(row)})}
+
+/* ── 状态刷新 ── */
+function apply(status){latest=status;
+  setStat('statOutput','outputState',status.output_connected?'已连接':'未连接',status.output_connected?'good':'bad');
+  setStat('statSpeaking','speakingState',status.speaking?'正在说话':'静音',status.speaking?'good':'info');
+  const llmReady=Boolean(status.llm.api_key_configured);
+  setStat('statLlm','llmState',llmReady?'已就绪':'未配置接口密钥',llmReady?'good':'bad');
+  const detail=$('llmDetail');if(detail){detail.textContent='服务商 ';const provider=document.createElement('span');provider.className='text-mono';provider.textContent=status.llm.provider||'未设置';const model=document.createElement('span');model.className='text-mono';model.textContent=status.llm.model||'未设置';detail.append(provider,document.createTextNode(' · 模型 '),model)}
+  setStat('statOcr','ocrState',status.subtitle.running?(status.subtitle.responding?'正在回答':'识别中'):'未启动',status.subtitle.running?(status.subtitle.responding?'good':'info'):'info');
+  setStat('statAuto','autoState',status.autopilot?'运行中':'已暂停',status.autopilot?'good':'warn');
+  const current=status.sales.current_product;
+  setStat('statProduct','productState',current?current.name:'未选择',current?'good':'warn');
+  setStat('statReadiness','readinessState',status.workflow.score+'%',status.workflow.ready?'good':'bad');
+  const live=status.live_state==='live';$('startLive').disabled=live;$('stopLive').disabled=!live;
+  $('platform').value=status.settings.platform;$('layout').value=status.settings.layout;$('liveTitle').value=status.settings.title;$('aiLabel').value=status.settings.ai_label;$('scriptGap').value=status.settings.script_gap_seconds;$('repeatScripts').checked=status.settings.repeat_scripts;$('shuffleScripts').checked=status.settings.shuffle_scripts;if(document.activeElement!==$('scripts'))$('scripts').value=status.scripts.join('\n');renderWorkflow(status.workflow);renderProducts(status.sales);renderHistory(status.history)}
+async function refresh(){try{apply(await api('/api/live/status'))}catch(e){setStat('statOutput','outputState','服务离线','bad')}}
+
+/* ── 手机访问地址 ── */
+ function setMobileAccess(urls){const list=Array.isArray(urls)?urls.filter(Boolean):[];const url=list[0]||location.origin+'/live_console.html';$('mobileAccessUrl').textContent=url;$('mobileAccessUrl').dataset.url=url;$('mobileAccessHint').textContent=list.length>1?'手机与电脑连接同一 Wi-Fi 后打开地址；如无法访问，请尝试其他网卡地址。备用地址：'+list.slice(1).join('、'):'手机与电脑连接同一 Wi-Fi 后，打开上方地址即可使用同一套工作台。'}
+ async function loadAccessInfo(){try{const access=await api('/api/system/access');setMobileAccess(access.lan_urls)}catch(e){setMobileAccess([location.origin+'/live_console.html'])}}
+ async function copyMobileAccess(){const url=$('mobileAccessUrl').dataset.url||$('mobileAccessUrl').textContent;try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(url)}else{const input=document.createElement('textarea');input.value=url;input.style.position='fixed';input.style.opacity='0';document.body.appendChild(input);input.select();document.execCommand('copy');input.remove()}LT.Toast.success('地址已复制','请在手机浏览器中打开该地址')}catch(e){LT.Toast.error('复制失败','请长按地址手动复制')}}
+ $('copyMobileUrl').onclick=copyMobileAccess;
+ async function loadActiveAccount(){try{const account=await api('/api/accounts/active');if(account&&account.avatar_id)$('avatarId').value=account.avatar_id}catch(e){}}
+ /* ── 登录与会员：用户信息条、免费版功能加锁、会话失效自动回登录 ── */
+const __pageApi=api;
+window.api=async function(url,method='GET',body){
+  try{return await __pageApi(url,method,body)}
+  catch(error){
+    if(error&&String(error.message||'').indexOf('请先登录')>=0){
+      location.href='/login.html?next='+encodeURIComponent(location.pathname)
+    }
+    throw error
+  }
+};
+/* 商品库右侧列表按钮由 JS 渲染，用捕获阶段统一拦截未购买的写操作入口 */
+$('productList').addEventListener('click',event=>{
+  const button=event.target.closest('button[data-action]');
+  if(!button||Auth.can('product.write'))return;
+  event.preventDefault();event.stopImmediatePropagation();
+  Auth.promptUpgrade('product.write')
+},true);
+Auth.mount({into:'.page-heading .actions',bannerInto:'#authBannerHost'});
+
+async function boot(){await Promise.all([loadAccessInfo(),loadActiveAccount()]);await refresh();setInterval(refresh,1200)}
+ boot();
+</script>
+</body>
+</html>

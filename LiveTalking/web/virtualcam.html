@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虚拟摄像头控制台 - LiveTalking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="common.css">
+    <script src="common.js"></script>
+    <style>
+        /* 组件全部复用 common.css v3（.glass-card / .card-header / .btn / .badge-status /
+           .stat-card / .panel / .chip / .checklist / .empty-state），本页只保留无法复用的补充样式。
+           已删除页面自建色板（:root 覆盖 --primary/--card-bg 会破坏 v3 暗色主题）。 */
+
+        /* 发送历史条目：可点击重发，兼顾键盘可达性 */
+        .history-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+            background: var(--surface-sunken);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 9px 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background var(--transition), border-color var(--transition);
+        }
+
+        .history-item:hover {
+            background: var(--primary-light);
+            border-color: var(--primary-border);
+        }
+
+        .history-item .time {
+            display: block;
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+
+        .history-item .text {
+            display: block;
+            color: var(--text);
+            font-size: 13.5px;
+            word-break: break-word;
+        }
+
+        #historyList {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav id="lt-nav-container"></nav>
+
+    <div class="container">
+        <div class="page-heading">
+            <h1><i class="bi bi-camera-video"></i> 虚拟摄像头控制台</h1>
+            <p class="page-subtitle">把数字人画面输出到 OBS 等直播软件的会话 0 控制台</p>
+            <div class="actions">
+                <button type="button" class="btn btn-outline btn-sm" onclick="checkStatus()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新状态
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 左侧：控制面板 -->
+            <div class="col-lg-8 card-fill-reset">
+                <!-- 状态显示 -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <i class="bi bi-activity"></i>
+                        <span>当前状态</span>
+                        <span id="statusIndicator" class="badge-status badge-silent ms-auto">静音中</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-grid mb-3">
+                            <div class="stat-card is-info">
+                                <span class="stat-label"><i class="bi bi-camera-video-fill"></i> 虚拟摄像头</span>
+                                <span class="stat-value sm" id="virtualcamDevice">OBS Virtual Camera</span>
+                                <span class="stat-foot">OBS 提供的虚拟设备</span>
+                            </div>
+                            <div class="stat-card is-info">
+                                <span class="stat-label"><i class="bi bi-aspect-ratio"></i> 输出分辨率</span>
+                                <span class="stat-value sm" id="resolution">1280 × 720</span>
+                                <span class="stat-foot">720p 横屏</span>
+                            </div>
+                            <div class="stat-card is-info">
+                                <span class="stat-label"><i class="bi bi-speedometer"></i> 输出帧率</span>
+                                <span class="stat-value sm" id="fps">25 帧/秒</span>
+                                <span class="stat-foot">25 FPS</span>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-title"><i class="bi bi-speaker"></i> 音频输出</div>
+                            <p class="mb-1 fs-sm">设备：<span id="audioDevice">系统默认扬声器</span></p>
+                            <p class="mb-0 fs-sm">采样率：16000 Hz（16 kHz）</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 文本输入 -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <i class="bi bi-chat-text"></i>
+                        <span>语音输出</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="textInput">输入文本内容</label>
+                            <textarea id="textInput" class="form-control" rows="4"
+                                placeholder="输入让数字人说的话，然后点「发送文本」"></textarea>
+                            <div class="fs-xs text-muted mt-1">快捷键：Ctrl + Enter 直接发送</div>
+                        </div>
+
+                        <!-- 快捷短语 -->
+                        <div class="mb-3">
+                            <label class="form-label">快捷短语</label>
+                            <div class="chip-group">
+                                <button type="button" class="chip" onclick="quickSpeak('你好，欢迎观看')">你好</button>
+                                <button type="button" class="chip" onclick="quickSpeak('感谢您的关注')">感谢</button>
+                                <button type="button" class="chip" onclick="quickSpeak('请问有什么可以帮助您的？')">询问</button>
+                                <button type="button" class="chip" onclick="quickSpeak('再见，下次再见')">再见</button>
+                                <button type="button" class="chip" onclick="quickSpeak('请稍等，我正在处理')">等待</button>
+                            </div>
+                        </div>
+
+                        <!-- 控制按钮：主操作只有一个（发送文本），停止类用 btn-danger -->
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button id="speakBtn" type="button" class="btn btn-primary" onclick="sendText()">
+                                <i class="bi bi-play-fill"></i> 发送文本
+                            </button>
+                            <button id="interruptBtn" type="button" class="btn btn-danger" onclick="interruptSpeech()">
+                                <i class="bi bi-stop-fill"></i> 打断播放
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="clearInput()">
+                                <i class="bi bi-x-circle"></i> 清空输入
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 右侧：历史记录 -->
+            <div class="col-lg-4 card-fill-reset">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <i class="bi bi-clock-history"></i>
+                        <span>发送历史</span>
+                        <div class="card-actions">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="clearHistory()"
+                                aria-label="清空发送历史" title="清空发送历史">
+                                <i class="bi bi-trash"></i> 清空
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="historyList">
+                            <!-- 历史记录会动态插入 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 使用说明 -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <i class="bi bi-book"></i>
+                        <span>使用说明</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="checklist">
+                            <div class="check-item ok">
+                                <i class="bi bi-check-circle"></i>
+                                <span>输入文本后点「发送文本」即可让数字人说话</span>
+                            </div>
+                            <div class="check-item ok">
+                                <i class="bi bi-check-circle"></i>
+                                <span>点「打断播放」可立即停止当前说话</span>
+                            </div>
+                            <div class="check-item ok">
+                                <i class="bi bi-check-circle"></i>
+                                <span>快捷短语可一键发送常用语句</span>
+                            </div>
+                            <div class="check-item ok">
+                                <i class="bi bi-check-circle"></i>
+                                <span>点历史记录可重新发送该句</span>
+                            </div>
+                            <div class="check-item ok">
+                                <i class="bi bi-check-circle"></i>
+                                <span>键盘快捷键：<span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> 发送，<span class="kbd">Esc</span> 打断</span>
+                            </div>
+                            <div class="check-item">
+                                <i class="bi bi-info-circle"></i>
+                                <span>分辨率、帧率等参数由启动参数决定，本页只做状态展示</span>
+                            </div>
+                            <div class="check-item">
+                                <i class="bi bi-info-circle"></i>
+                                <span>会话 ID 固定为 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        LT.Nav.current = 'virtualcam'; LT.Nav.inject('#lt-nav-container');
+        //const BASE_URL = 'http://localhost:8010';
+        const SESSION_ID = '0';
+        let speakingHistory = [];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            checkStatus();
+            loadHistory();
+            // 定期更新状态
+            setInterval(checkStatus, 3000);
+        });
+
+        // 发送文本
+        async function sendText() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                LT.Toast.warning('请输入文本内容！');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/human`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionid: SESSION_ID,
+                        type: 'echo',
+                        text: text
+                    })
+                });
+
+                const result = await response.json();
+                if (result.code === 0) {
+                    console.log('发送成功:', text);
+                    addToHistory(text);
+                    document.getElementById('textInput').value = '';
+                    // 立即更新状态
+                    setTimeout(checkStatus, 500);
+                } else {
+                    LT.Toast.error('发送失败: ' + result.msg);
+                }
+            } catch (error) {
+                console.error('发送错误:', error);
+                LT.Toast.error('发送失败，请检查服务是否运行！');
+            }
+        }
+
+        // 快捷说话
+        function quickSpeak(text) {
+            document.getElementById('textInput').value = text;
+            sendText();
+        }
+
+        // 打断播放
+        async function interruptSpeech() {
+            try {
+                const response = await fetch(`/interrupt_talk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionid: SESSION_ID })
+                });
+
+                const result = await response.json();
+                if (result.code === 0) {
+                    console.log('已打断说话');
+                    checkStatus();
+                } else {
+                    LT.Toast.error('打断失败: ' + result.msg);
+                }
+            } catch (error) {
+                console.error('打断错误:', error);
+                LT.Toast.error('打断失败，请检查服务是否运行！');
+            }
+        }
+
+        // 检查状态
+        async function checkStatus() {
+            try {
+                const response = await fetch(`/is_speaking`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionid: SESSION_ID })
+                });
+
+                const result = await response.json();
+                updateStatusIndicator(result.data);
+            } catch (error) {
+                console.error('状态检查错误:', error);
+                updateStatusIndicator(false);
+            }
+        }
+
+        // 更新状态指示器
+        function updateStatusIndicator(isSpeaking) {
+            const indicator = document.getElementById('statusIndicator');
+            if (isSpeaking) {
+                indicator.className = 'badge-status badge-speaking ms-auto';
+                indicator.textContent = '说话中';
+            } else {
+                indicator.className = 'badge-status badge-silent ms-auto';
+                indicator.textContent = '静音中';
+            }
+        }
+
+        // 清空输入
+        function clearInput() {
+            document.getElementById('textInput').value = '';
+        }
+
+        // 添加到历史记录
+        function addToHistory(text) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+            speakingHistory.unshift({ text, time: timeStr });
+            if (speakingHistory.length > 20) {
+                speakingHistory.pop();
+            }
+
+            saveHistory();
+            renderHistory();
+        }
+
+        // 渲染历史记录
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            if (!speakingHistory.length) {
+                container.innerHTML = `
+                    <div class="empty-state compact">
+                        <i class="bi bi-clock-history empty-state-icon"></i>
+                        <h4>暂无发送记录</h4>
+                        <p>发送过的文本会自动记录在这里，点击可重新发送。</p>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = speakingHistory.map((item, index) => `
+                <button type="button" class="history-item" onclick="replayFromHistory(${index})" title="重新发送这条文本">
+                    <span class="time">${escapeHtml(item.time)}</span>
+                    <span class="text">${escapeHtml(item.text)}</span>
+                </button>
+            `).join('');
+        }
+
+        // 从历史重播
+        function replayFromHistory(index) {
+            const item = speakingHistory[index];
+            if (!item) return;
+            document.getElementById('textInput').value = item.text;
+            sendText();
+        }
+
+        // 清空历史
+        function clearHistory() {
+            speakingHistory = [];
+            saveHistory();
+            renderHistory();
+        }
+
+        // 保存历史到 localStorage
+        function saveHistory() {
+            localStorage.setItem('virtualcam_history', JSON.stringify(speakingHistory));
+        }
+
+        // 加载历史
+        function loadHistory() {
+            try {
+                const saved = localStorage.getItem('virtualcam_history');
+                if (saved) speakingHistory = JSON.parse(saved) || [];
+            } catch (e) {
+                speakingHistory = [];
+            }
+            renderHistory();
+        }
+
+        // 文本转义，避免历史文本里的引号/尖括号破坏标记
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // 保存配置
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                sendText();
+            }
+            if (e.key === 'Escape') {
+                interruptSpeech();
+            }
+        });
+    </script>
+</body>
+</html>

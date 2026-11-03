@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>登录 - AI 数字人直播工作台</title>
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script src="/common.js"></script>
+  <style>
+    [hidden] { display: none !important; }
+    .login-page { padding-bottom: 56px; }
+    .login-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 430px) minmax(0, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+    }
+    .login-grid > .card { margin-bottom: 0; }
+    .notice-area { margin-bottom: var(--space-4); }
+    .notice-area .alert { margin-bottom: 0; }
+
+    /* 登录 / 注册切换标签（本页专属，键盘可达） */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      margin-bottom: var(--space-4);
+      background: var(--surface-sunken);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .tab {
+      flex: 1 1 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: 8px 12px;
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 620;
+      color: var(--text-secondary);
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+    }
+    .tab:hover:not(:disabled) { color: var(--text); }
+    .tab.active { background: var(--card-bg); color: var(--primary); box-shadow: var(--shadow-sm); }
+    .tab:disabled { opacity: .5; cursor: not-allowed; }
+    .tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .tab i { font-size: 15px; }
+
+    .message { min-height: 20px; margin-top: var(--space-3); }
+    .message .alert { margin-bottom: 0; }
+    .panel-hint { margin: -4px 0 var(--space-4); }
+
+    /* 免费版 / 专业版对比 */
+    .plan-list { display: grid; gap: var(--space-3); }
+    .plan-card {
+      padding: var(--space-4);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .plan-card.is-pro { border-color: var(--primary); background: var(--primary-light); }
+    .plan-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+    .plan-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .plan-price { font-size: 13.5px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+    .plan-summary { margin: 8px 0 0; font-size: 13px; line-height: 1.65; color: var(--text-secondary); }
+    .plan-bullets { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+    .plan-bullets li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+    .plan-bullets li i { flex-shrink: 0; margin-top: 2px; color: var(--success); }
+    .purchase-line { margin: 0; }
+    .purchase-facts { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+    .plan-loading { display: flex; align-items: center; gap: 8px; }
+
+    @media (max-width: 880px) {
+      .login-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <nav id="lt-nav-container"></nav>
+  <main class="container container-narrow login-page">
+    <div class="page-heading">
+      <div>
+        <h1 class="page-title"><i class="bi bi-box-arrow-in-right"></i>登录 AI 数字人直播工作台</h1>
+        <p class="subtitle">登录后可获得管理员的完整功能；免费版可查看工作台与商品库、试听模拟评论，购买后解锁完整功能。</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-outline" href="/live_console.html"><i class="bi bi-broadcast-pin"></i>先看看工作台</a>
+      </div>
+    </div>
+
+    <div id="pageNotice" class="notice-area" hidden></div>
+
+    <div class="login-grid">
+      <section class="card">
+        <div class="card-header"><i class="bi bi-shield-lock"></i>账号登录 / 自助注册</div>
+        <div class="card-body">
+          <div class="tabs" role="tablist" aria-label="登录或注册" id="authTabs">
+            <button class="tab active" type="button" role="tab" id="tabLogin"
+                    aria-controls="panelLogin" aria-selected="true" tabindex="0">
+              <i class="bi bi-box-arrow-in-right"></i>登录
+            </button>
+            <button class="tab" type="button" role="tab" id="tabRegister"
+                    aria-controls="panelRegister" aria-selected="false" tabindex="-1">
+              <i class="bi bi-person-plus"></i>注册
+            </button>
+          </div>
+          <div id="registerClosed" class="hint" hidden></div>
+
+          <div id="panelLogin" role="tabpanel" aria-labelledby="tabLogin" tabindex="0">
+            <div class="form-group">
+              <label class="form-label" for="loginUsername">用户名</label>
+              <input class="form-control" type="text" id="loginUsername"
+                     autocomplete="username" autocapitalize="off" spellcheck="false"
+                     placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="loginPassword">密码</label>
+              <input class="form-control" type="password" id="loginPassword"
+                     autocomplete="current-password" placeholder="请输入密码">
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" type="button" id="loginSubmit">
+                <i class="bi bi-box-arrow-in-right"></i>登录
+              </button>
+              <a class="btn btn-outline" href="/upgrade.html"><i class="bi bi-gem"></i>购买 / 兑换激活码</a>
+            </div>
+            <div class="message" id="loginMessage"></div>
+            <div class="hint" id="singleSessionNotice" hidden>
+              同一账号同一时间只能在一处登录：在别处登录后，这里的登录会自动退出（管理员不限）。
+            </div>
+          </div>
+
+          <div id="panelRegister" role="tabpanel" aria-labelledby="tabRegister" tabindex="0" hidden>
+            <div class="form-group">
+              <label class="form-label" for="regUsername">用户名<span class="req">*</span></label>
+              <input class="form-control" type="text" id="regUsername"
+                     autocomplete="username" autocapitalize="off" spellcheck="false"
+                     placeholder="3-24 位中英文、数字、下划线或短横线">
+              <div class="form-hint">用于登录，注册后不可修改：3-24 位中英文、数字、下划线或短横线。</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="regDisplayName">昵称（可选）</label>
+              <input class="form-control" type="text" id="regDisplayName"
+                     autocomplete="nickname" placeholder="展示在工作台右上角，留空则使用用户名">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="regPassword">密码<span class="req">*</span></label>
+              <input class="form-control" type="password" id="regPassword"
+                     autocomplete="new-password" placeholder="至少 8 位，同时包含字母和数字">
+              <div class="form-hint">至少 8 位，且必须同时包含字母和数字（最多 128 位）。</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="regPasswordConfirm">确认密码<span class="req">*</span></label>
+              <input class="form-control" type="password" id="regPasswordConfirm"
+                     autocomplete="new-password" placeholder="请再次输入密码">
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" type="button" id="registerSubmit">
+                <i class="bi bi-person-plus"></i>注册并登录
+              </button>
+            </div>
+            <div class="hint panel-hint">注册成功后即为免费版账号：可查看工作台、商品库并试听模拟评论，购买专业版后解锁开播等完整功能。</div>
+            <div class="message" id="registerMessage"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header"><i class="bi bi-gem"></i>免费版 / 专业版对比</div>
+        <div class="card-body">
+          <div class="plan-list" id="planList">
+            <div class="hint plan-loading"><span class="spinner spinner-sm"></span>正在读取套餐信息…</div>
+          </div>
+        </div>
+        <div class="card-footer" id="purchaseLine">
+          <p class="hint purchase-line">正在读取购买与兑换信息…</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ── 接口与规则常量：与 server/auth_routes.py、server/auth_manager.py 保持一致 ──
+      const ENDPOINT_ME = '/api/auth/me';
+      const ENDPOINT_PLANS = '/api/auth/plans';
+      const ENDPOINT_LOGIN = '/api/auth/login';
+      const ENDPOINT_REGISTER = '/api/auth/register';
+      const DEFAULT_NEXT = '/live_console.html';
+      const UPGRADE_PAGE = '/upgrade.html';
+      const FORCE_PASSWORD_TEXT = '请登录后立即修改密码';
+      const REGISTER_CLOSED_TEXT = '管理员已关闭自助注册，请联系管理员开号';
+
+      // 与后端 USERNAME_RE 同一条规则、与 username_problem() 同一套提示文案
+      const USERNAME_RE = /^[A-Za-z0-9_.\-\u4e00-\u9fa5]{3,24}$/;
+      // 与后端 MIN_PASSWORD_LENGTH / password_problem() 同一套规则与提示文案
+      const MIN_PASSWORD_LENGTH = 8;
+      const MAX_PASSWORD_LENGTH = 128;
+
+      const $ = (sel, root) => (root || document).querySelector(sel);
+
+      const ALERT_ICONS = {
+        info: 'bi-info-circle',
+        success: 'bi-check-circle',
+        warning: 'bi-exclamation-triangle',
+        danger: 'bi-exclamation-octagon',
+      };
+
+      const forcePasswordNotice = new URLSearchParams(window.location.search).get('force_password') === '1';
+      let redirecting = false;
+
+      // ───────────────────── 基础工具 ─────────────────────
+
+      function esc(value) {
+        return String(value === undefined || value === null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function alertHtml(kind, title, bodyHtml) {
+        const icon = ALERT_ICONS[kind] || ALERT_ICONS.info;
+        const head = title ? '<div class="alert-title">' + esc(title) + '</div>' : '';
+        const body = bodyHtml ? '<div>' + bodyHtml + '</div>' : '';
+        return '<div class="alert alert-' + kind + '"><i class="bi ' + icon + '"></i>' +
+          '<div class="alert-body">' + head + body + '</div></div>';
+      }
+
+      // bodyHtml 必须是已转义的 HTML 片段
+      function setPageNotice(kind, title, bodyHtml) {
+        const box = $('#pageNotice');
+        box.innerHTML = alertHtml(kind, title, bodyHtml);
+        box.hidden = false;
+      }
+
+      function setMessage(box, kind, title, bodyHtml) {
+        if (!box) return;
+        box.innerHTML = kind ? alertHtml(kind, title, bodyHtml) : '';
+      }
+
+      function toast(kind, title, message) {
+        if (window.LT && window.LT.Toast && typeof window.LT.Toast[kind] === 'function') {
+          window.LT.Toast[kind](title, message);
+        }
+      }
+
+      function busy(button, loading) {
+        if (!button) return;
+        if (window.LT && window.LT.Loading && typeof window.LT.Loading.button === 'function') {
+          window.LT.Loading.button(button, loading);
+          return;
+        }
+        button.disabled = !!loading;
+      }
+
+      // 统一请求：只发 JSON、带同源 Cookie、把任何失败翻译成中文可读消息
+      async function api(path, payload) {
+        const options = {
+          method: payload === undefined ? 'GET' : 'POST',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' },
+        };
+        if (payload !== undefined) {
+          options.headers['Content-Type'] = 'application/json';
+          options.body = JSON.stringify(payload);
+        }
+
+        let response;
+        try {
+          response = await fetch(path, options);
+        } catch (error) {
+          throw new Error('无法连接服务器，请确认服务已启动后重试');
+        }
+
+        let body = null;
+        try {
+          body = await response.json();
+        } catch (error) {
+          body = null;
+        }
+        if (!body || typeof body !== 'object') {
+          throw new Error('服务器返回内容无法解析（HTTP ' + response.status + '），请稍后重试');
+        }
+        if (!response.ok || body.code !== 0) {
+          const failure = new Error(body.msg || ('请求失败（HTTP ' + response.status + '）'));
+          failure.code = body.code;
+          failure.status = response.status;
+          throw failure;
+        }
+        return body.data || {};
+      }
+
+      // ───────────────────── 跳转目标（防开放重定向） ─────────────────────
+
+      function resolveNext() {
+        let raw = '';
+        try {
+          raw = (new URLSearchParams(window.location.search).get('next') || '').trim();
+        } catch (error) {
+          raw = '';
+        }
+        if (!raw) return DEFAULT_NEXT;
+        // 只接受站内路径：必须以单个 "/" 开头，禁止 //host、反斜杠与绝对地址
+        if (raw.charAt(0) !== '/') return DEFAULT_NEXT;
+        if (raw.charAt(1) === '/' || raw.charAt(1) === '\\') return DEFAULT_NEXT;
+        if (raw.indexOf('\\') !== -1) return DEFAULT_NEXT;
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw)) return DEFAULT_NEXT;
+        if (/[\u0000-\u001f\u007f]/.test(raw)) return DEFAULT_NEXT;
+        return raw;
+      }
+
+      function go(target) {
+        if (redirecting) return;
+        redirecting = true;
+        window.location.replace(target);
+      }
+
+      // ───────────────────── 校验（与后端同文案） ─────────────────────
+
+      function usernameProblem(username) {
+        if (!username) return '请填写用户名';
+        if (!USERNAME_RE.test(username)) return '用户名需为 3-24 位中英文、数字、下划线或短横线';
+        return null;
+      }
+
+      function passwordProblem(password) {
+        if (!password || password.length < MIN_PASSWORD_LENGTH) {
+          return '密码至少需要 ' + MIN_PASSWORD_LENGTH + ' 位';
+        }
+        if (password.length > MAX_PASSWORD_LENGTH) {
+          return '密码过长（最多 ' + MAX_PASSWORD_LENGTH + ' 位）';
+        }
+        if (/^\d+$/.test(password) || /^[A-Za-z]+$/.test(password)) {
+          return '密码需要同时包含字母和数字';
+        }
+        return null;
+      }
+
+      // ───────────────────── 标签切换 ─────────────────────
+
+      const tabs = [$('#tabLogin'), $('#tabRegister')];
+      const panels = [$('#panelLogin'), $('#panelRegister')];
+
+      function enabledTabIndexes() {
+        const list = [];
+        tabs.forEach((tab, index) => { if (!tab.disabled) list.push(index); });
+        return list;
+      }
+
+      function selectTab(index, focus) {
+        if (index < 0 || index >= tabs.length || tabs[index].disabled) return;
+        tabs.forEach((tab, i) => {
+          const selected = i === index;
+          tab.setAttribute('aria-selected', String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+          tab.classList.toggle('active', selected);
+          panels[i].hidden = !selected;
+        });
+        if (focus) tabs[index].focus();
+      }
+
+      function activeTabIndex() {
+        for (let i = 0; i < tabs.length; i += 1) {
+          if (tabs[i].getAttribute('aria-selected') === 'true') return i;
+        }
+        return 0;
+      }
+
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectTab(index, false));
+      });
+
+      $('#authTabs').addEventListener('keydown', (event) => {
+        const available = enabledTabIndexes();
+        if (!available.length) return;
+        const current = available.indexOf(activeTabIndex());
+        const from = current === -1 ? 0 : current;
+        let target = -1;
+
+        if (event.key === 'ArrowRight') target = available[(from + 1) % available.length];
+        else if (event.key === 'ArrowLeft') target = available[(from - 1 + available.length) % available.length];
+        else if (event.key === 'Home') target = available[0];
+        else if (event.key === 'End') target = available[available.length - 1];
+
+        if (target === -1) return;
+        event.preventDefault();
+        selectTab(target, true);
+      });
+
+      // ───────────────────── 登录 / 注册 ─────────────────────
+
+      function afterAuthenticated(data) {
+        const user = (data && data.user) || null;
+        if (forcePasswordNotice || (user && user.must_change_password)) {
+          setPageNotice('warning', FORCE_PASSWORD_TEXT,
+            '当前账号仍在使用初始密码，初始密码是公开的默认值，请登录后立即修改密码。');
+          toast('warning', FORCE_PASSWORD_TEXT, '初始密码是公开的默认值，请尽快更换。');
+          window.setTimeout(() => go(resolveNext()), 1600);
+          return;
+        }
+        go(resolveNext());
+      }
+
+      async function submitLogin() {
+        const box = $('#loginMessage');
+        const button = $('#loginSubmit');
+        const username = $('#loginUsername').value.trim();
+        const password = $('#loginPassword').value;
+
+        if (!username) {
+          setMessage(box, 'danger', '请填写用户名', '');
+          $('#loginUsername').focus();
+          return;
+        }
+        if (!password) {
+          setMessage(box, 'danger', '请填写密码', '');
+          $('#loginPassword').focus();
+          return;
+        }
+
+        setMessage(box, null);
+        busy(button, true);
+        try {
+          const data = await api(ENDPOINT_LOGIN, { username: username, password: password });
+          afterAuthenticated(data);
+        } catch (error) {
+          const kind = (error.status === 429 || error.code === 429) ? 'warning' : 'danger';
+          setMessage(box, kind, error.message, '');
+        } finally {
+          busy(button, false);
+        }
+      }
+
+      async function submitRegister() {
+        const box = $('#registerMessage');
+        const button = $('#registerSubmit');
+        const username = $('#regUsername').value.trim();
+        const displayName = $('#regDisplayName').value.trim();
+        const password = $('#regPassword').value;
+        const confirm = $('#regPasswordConfirm').value;
+
+        const nameError = usernameProblem(username);
+        if (nameError) {
+          setMessage(box, 'danger', nameError, '');
+          $('#regUsername').focus();
+          return;
+        }
+        const passwordError = passwordProblem(password);
+        if (passwordError) {
+          setMessage(box, 'danger', passwordError, '');
+          $('#regPassword').focus();
+          return;
+        }
+        if (password !== confirm) {
+          setMessage(box, 'danger', '两次输入的密码不一致', '');
+          $('#regPasswordConfirm').focus();
+          return;
+        }
+
+        setMessage(box, null);
+        busy(button, true);
+        try {
+          const data = await api(ENDPOINT_REGISTER, {
+            username: username,
+            password: password,
+            display_name: displayName,
+          });
+          afterAuthenticated(data);
+        } catch (error) {
+          const kind = (error.status === 429 || error.code === 429) ? 'warning' : 'danger';
+          setMessage(box, kind, error.message, '');
+        } finally {
+          busy(button, false);
+        }
+      }
+
+      [$('#loginUsername'), $('#loginPassword')].forEach((input) => {
+        input.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          submitLogin();
+        });
+      });
+
+      [$('#regUsername'), $('#regDisplayName'), $('#regPassword'), $('#regPasswordConfirm')].forEach((input) => {
+        input.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          submitRegister();
+        });
+      });
+
+      $('#loginSubmit').addEventListener('click', submitLogin);
+      $('#registerSubmit').addEventListener('click', submitRegister);
+
+      // ───────────────────── 套餐对比 ─────────────────────
+
+      function renderPlans(data) {
+        const plans = (data && data.plans) || {};
+        const keys = Object.keys(plans);
+        // 管理员的套餐是内部授权，不放进「免费版 / 专业版」对比
+        const publicKeys = keys.filter((key) => key !== 'admin');
+        const list = publicKeys.length ? publicKeys : keys;
+        const host = $('#planList');
+
+        if (!list.length) {
+          host.innerHTML = '<div class="hint">暂时没有可比较的套餐信息。</div>';
+          return;
+        }
+
+        host.innerHTML = list.map((key) => {
+          const plan = plans[key] || {};
+          const bullets = Array.isArray(plan.bullets) ? plan.bullets : [];
+          const isPro = key === 'pro';
+          return '<article class="plan-card' + (isPro ? ' is-pro' : '') + '">' +
+            '<div class="plan-top">' +
+            '<span class="plan-name">' + esc(plan.label || key) + '</span>' +
+            '<span class="plan-price">' + esc(plan.price || '') + '</span>' +
+            '</div>' +
+            (plan.summary ? '<p class="plan-summary">' + esc(plan.summary) + '</p>' : '') +
+            (bullets.length
+              ? '<ul class="plan-bullets">' + bullets.map((item) =>
+                  '<li><i class="bi bi-check2"></i><span>' + esc(item) + '</span></li>').join('') + '</ul>'
+              : '') +
+            '</article>';
+        }).join('');
+      }
+
+      function renderPurchaseLine(config) {
+        const facts = [];
+        if (config.contact) facts.push('联系方式：' + esc(config.contact));
+        if (config.purchase_note) facts.push('购买说明：' + esc(config.purchase_note));
+        if (config.pro_days_default) facts.push('专业版单次开通时长：' + esc(config.pro_days_default) + ' 天');
+
+        $('#purchaseLine').innerHTML = '<p class="hint purchase-line">' +
+          '<i class="bi bi-bag-check"></i> 购买 / 兑换激活码：打开 <a href="' + UPGRADE_PAGE + '">升级会员</a> ' +
+          '页面并输入激活码，即可解锁专业版完整功能。' +
+          (facts.length ? '<span class="purchase-facts">' + facts.join('　·　') + '</span>' : '') +
+          '</p>';
+      }
+
+      async function loadPlans() {
+        try {
+          const data = await api(ENDPOINT_PLANS);
+          renderPlans(data);
+          renderPurchaseLine(data.config || {});
+        } catch (error) {
+          $('#planList').innerHTML = '<div class="hint">套餐信息读取失败：' + esc(error.message) + '</div>';
+          renderPurchaseLine({});
+        }
+      }
+
+      // ───────────────────── 页面状态 ─────────────────────
+
+      function applyAuthDisabled() {
+        tabs[1].hidden = true;
+        tabs[1].disabled = true;
+        $('#registerClosed').hidden = true;
+        selectTab(0, false);
+
+        [$('#loginUsername'), $('#loginPassword'), $('#loginSubmit')].forEach((element) => {
+          element.disabled = true;
+        });
+
+        setPageNotice('info', '登录功能当前已关闭',
+          '本机未启用登录与会员校验，所有功能都可以直接使用，无需登录。' +
+          '<a href="' + DEFAULT_NEXT + '">前往直播工作台</a>');
+      }
+
+      function applyRegisterClosed() {
+        const tab = $('#tabRegister');
+        tab.disabled = true;
+        tab.setAttribute('aria-disabled', 'true');
+        tab.title = REGISTER_CLOSED_TEXT;
+
+        [$('#regUsername'), $('#regDisplayName'), $('#regPassword'),
+         $('#regPasswordConfirm'), $('#registerSubmit')].forEach((element) => {
+          element.disabled = true;
+        });
+
+        const hint = $('#registerClosed');
+        hint.textContent = REGISTER_CLOSED_TEXT;
+        hint.hidden = false;
+
+        setMessage($('#registerMessage'), 'warning', REGISTER_CLOSED_TEXT,
+          '请把需要的用户名发给管理员，由管理员在「用户与激活码管理」中为你开号；也可以先看看工作台：' +
+          '<a href="' + DEFAULT_NEXT + '">前往直播工作台</a>。');
+      }
+
+      async function boot() {
+        if (forcePasswordNotice) {
+          setPageNotice('warning', FORCE_PASSWORD_TEXT,
+            '登录后请立即修改密码，初始密码是公开的默认值。');
+        }
+
+        let me = null;
+        try {
+          me = await api(ENDPOINT_ME);
+        } catch (error) {
+          setPageNotice('warning', '无法读取登录状态',
+            esc(error.message) + '，你仍然可以尝试登录。');
+        }
+
+        if (me) {
+          if (me.auth_enabled === false) {
+            applyAuthDisabled();
+            loadPlans();
+            return;
+          }
+          if (me.authenticated) {
+            go(resolveNext());
+            return;
+          }
+          if (me.allow_register === false) applyRegisterClosed();
+          if (me.single_session !== false) {
+            const notice = $('#singleSessionNotice');
+            if (notice) notice.hidden = false;
+          }
+        }
+
+        loadPlans();
+        const first = $('#loginUsername');
+        if (first && !first.disabled) first.focus();
+      }
+
+      if (window.LT && window.LT.Nav && typeof window.LT.Nav.inject === 'function') {
+        window.LT.Nav.current = 'login';
+        window.LT.Nav.inject('#lt-nav-container');
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,3469 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-accent="sky" data-nav="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>AI 数字人</title>
+<!-- 本文件由 tmp/assemble_app.py 生成：外壳（左导航/工具栏/多标签/设置/关于）新写，业务面板与接口层从 desktop.html 复用；不要手工改本文件，改 tmp/app_parts/* 后重新装配。 -->
+
+<style>
+/* ═══════════════════════════ 1. 设计令牌（主题变量） ═══════════════════════════ */
+:root{
+  /* 主色：浅蓝（默认）。可在“设置 → 外观 → 主色”切换，只改这一组变量 */
+  --brand:#38bdf8; --brand-strong:#0ea5e9; --brand-deep:#0284c7;
+  --brand-soft:#e0f2fe; --brand-tint:rgba(56,189,248,.16); --brand-ring:rgba(14,165,233,.34);
+  --on-brand:#062a3d;
+
+  --text:#0f2438; --text-2:#4a6076; --text-3:#7d90a4;
+  --line:rgba(15,40,70,.10); --line-strong:rgba(15,40,70,.18);
+  --surface:#ffffff; --surface-2:#f4f8fc; --surface-3:#e9f1f8;
+  --glass:rgba(250,253,255,.82); --glass-solid:#f8fbfe;
+  --ok:#0f9d6e; --ok-bg:#e6f7f0; --warn:#c47f0a; --warn-bg:#fdf3e2;
+  --err:#d64545; --err-bg:#fdecec; --info:#2f7fd8; --info-bg:#e8f1fd;
+  --shadow-win:0 22px 56px rgba(12,38,66,.26), 0 3px 10px rgba(12,38,66,.14);
+  --shadow-soft:0 8px 24px rgba(12,38,66,.12);
+  --shadow-pop:0 16px 44px rgba(12,38,66,.22);
+  --radius:10px; --radius-sm:7px; --radius-lg:14px;
+  --title-h:38px; --taskbar-h:52px;
+  --font:'Segoe UI Variable','Segoe UI','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif;
+  --mono:'Cascadia Mono','JetBrains Mono',Consolas,'Courier New',monospace;
+  --t-fast:.14s cubic-bezier(.2,.7,.3,1); --t-base:.22s cubic-bezier(.2,.7,.3,1);
+}
+/* 深色主题：只需覆盖下面这些变量 */
+html[data-theme="dark"]{
+  --text:#e8f1fa; --text-2:#a9bccd; --text-3:#7d92a6;
+  --line:rgba(160,196,226,.16); --line-strong:rgba(160,196,226,.26);
+  --surface:#161f2b; --surface-2:#1d2836; --surface-3:#243040;
+  --glass:rgba(20,29,40,.82); --glass-solid:#141d28;
+  --ok:#3fcf9a; --ok-bg:rgba(24,160,120,.16); --warn:#f0b45c; --warn-bg:rgba(196,127,10,.18);
+  --err:#f08a8a; --err-bg:rgba(214,69,69,.18); --info:#7fb6f0; --info-bg:rgba(47,127,216,.18);
+  --shadow-win:0 22px 56px rgba(0,0,0,.55), 0 3px 10px rgba(0,0,0,.45);
+  --shadow-soft:0 8px 24px rgba(0,0,0,.4);
+  --shadow-pop:0 16px 44px rgba(0,0,0,.5);
+  --on-brand:#04222f;
+}
+/* 主色备选（默认 sky＝浅蓝，符合“主色调：浅蓝色”） */
+html[data-accent="azure"]{--brand:#60a5fa;--brand-strong:#3b82f6;--brand-deep:#2563eb;--brand-soft:#e8f0fe;--brand-tint:rgba(96,165,250,.16);--brand-ring:rgba(59,130,246,.34)}
+html[data-accent="cyan"]{--brand:#22d3ee;--brand-strong:#06b6d4;--brand-deep:#0891b2;--brand-soft:#e0fbfe;--brand-tint:rgba(34,211,238,.16);--brand-ring:rgba(6,182,212,.34)}
+html[data-accent="teal"]{--brand:#2dd4bf;--brand-strong:#14b8a6;--brand-deep:#0d9488;--brand-soft:#e2fbf6;--brand-tint:rgba(45,212,191,.16);--brand-ring:rgba(20,184,166,.34)}
+html[data-accent="indigo"]{--brand:#818cf8;--brand-strong:#6366f1;--brand-deep:#4f46e5;--brand-soft:#eef0fe;--brand-tint:rgba(129,140,248,.16);--brand-ring:rgba(99,102,241,.34)}
+
+/* ═══════════════════════════ 2. 基础重置 ═══════════════════════════ */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{
+  font-family:var(--font); color:var(--text); background:#8fb6d6;
+  font-size:13.5px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  user-select:none; /* 桌面软件观感：默认不可选中文本，正文区域再放开 */
+}
+body.no-anim *{transition:none!important;animation:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--brand-strong);outline-offset:2px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--text-3);background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+
+/* ═══════════ 外壳布局（app.html 新增，复用上面的设计令牌）═══════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   常规桌面软件布局：顶部标题/菜单行 + 左侧导航 + 多标签内容区 + 状态栏
+   令牌与控件样式复用 desktop.html 第 1/2/9 节，这里只补“应用外壳”骨架。
+   实际使用到的令牌名：--brand/--brand-strong/--brand-deep/--brand-soft/--brand-ring
+   --on-brand/--text/--text-2/--text-3/--line/--line-strong/--surface/--surface-2/
+   --surface-3/--ok/--ok-bg/--warn/--warn-bg/--err/--err-bg/--radius/--radius-sm/--t-fast
+   ═══════════════════════════════════════════════════════════════════ */
+#app { position: fixed; inset: 0; display: grid; grid-template-rows: auto auto 1fr; }
+
+/* ── 标题行：品牌 + 模块名 + 服务状态 + 账号 ───────────────── */
+#titlebar {
+  display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 12px;
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+}
+#titlebar .brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 14.5px; }
+#titlebar .brand .logo {
+  width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex: 0 0 26px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong)); color: var(--on-brand);
+  box-shadow: 0 2px 8px var(--brand-ring);
+}
+#titlebar .brand .logo svg { width: 17px; height: 17px; }
+/* 版本/端标记做成小胶囊：直接跟在“AI 数字人”后面会被读成“AI 数字人网页端”一个词 */
+#titlebar .brand small { font-weight: 500; color: var(--text-3); font-size: 10.5px; margin-left: 6px;
+  padding: 1px 7px; border-radius: 999px; background: var(--surface-3); }
+#titlebar .brand small:empty { display: none; }
+#titlebar .crumb { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+#titlebar .crumb h1 { font-size: 14px; font-weight: 600; margin: 0; white-space: nowrap; }
+#titlebar .crumb .sub { color: var(--text-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#titlebar .grow { flex: 1 1 auto; }
+
+/* 标题行按钮（自包含，不依赖任务栏样式） */
+.app-btn {
+  height: 30px; padding: 0 11px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 7px;
+  background: var(--surface); border: 1px solid var(--line-strong); color: var(--text); font-size: 12.5px;
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+.app-btn:hover { background: var(--surface-3); }
+.app-btn:active { transform: translateY(1px); }
+.app-btn svg { width: 15px; height: 15px; }
+.app-btn.icon-only { padding: 0; width: 30px; justify-content: center; }
+.app-btn.primary { background: linear-gradient(180deg, var(--brand), var(--brand-strong)); border-color: var(--brand-deep); color: var(--on-brand); font-weight: 600; }
+.app-btn[disabled] { opacity: .5; pointer-events: none; }
+.app-chip {
+  height: 28px; border-radius: 999px; padding: 0 11px; font-size: 11.5px;
+  display: inline-flex; align-items: center; gap: 6px; background: var(--surface); color: var(--text-2); border: 1px solid var(--line);
+}
+.app-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.app-chip.ok .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
+.app-chip.err .dot { background: var(--err); box-shadow: 0 0 0 3px var(--err-bg); }
+.app-chip.warn .dot { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-bg); }
+/* 复用的 updateModeChip() 用的是 .tb-chip（与 desktop.html 保持一致） */
+.tb-chip {
+  height: 28px; border-radius: 999px; padding: 0 11px; font-size: 11.5px;
+  display: inline-flex; align-items: center; gap: 6px; background: var(--surface); color: var(--text-2); border: 1px solid var(--line);
+}
+.tb-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.tb-chip.ok .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
+.tb-chip.err .dot { background: var(--err); box-shadow: 0 0 0 3px var(--err-bg); }
+.tb-chip.warn .dot { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-bg); }
+/* 通知按钮的未读小点（renderNotes 会给 #notifyBtn 加 .has） */
+#notifyBtn { position: relative; }
+#notifyDot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--err); display: none; }
+#notifyBtn.has #notifyDot { display: block; }
+
+/* ── 菜单行（文件/视图/服务/帮助）──────────────────────────── */
+#menubar {
+  display: flex; align-items: center; gap: 2px; height: 30px; padding: 0 8px;
+  background: var(--surface); border-bottom: 1px solid var(--line); font-size: 12.5px;
+}
+#menubar .mi { border: 0; background: transparent; color: var(--text); padding: 5px 10px; border-radius: 6px; }
+#menubar .mi:hover, #menubar .mi.on { background: var(--surface-3); }
+#menubar .kb { margin-left: auto; color: var(--text-3); font-size: 11.5px; display: flex; gap: 10px; align-items: center; }
+#menubar .kb kbd { font-family: inherit; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+/* ── 主体：左导航 + 内容区 ─────────────────────────────────── */
+#body { display: grid; grid-template-columns: 236px 1fr; min-height: 0;
+  transition: grid-template-columns .18s cubic-bezier(.2,.7,.3,1); }
+@media (prefers-reduced-motion: reduce) { #body { transition: none; } }
+html[data-nav="collapsed"] #body { grid-template-columns: 0 1fr; }
+html[data-nav="collapsed"] #side { visibility: hidden; }
+
+#side { display: flex; flex-direction: column; min-height: 0; background: var(--surface-2); border-right: 1px solid var(--line); }
+#side .side-head { padding: 9px 10px 4px; }
+#side .side-search { position: relative; }
+#side .side-search svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-3); }
+#side input {
+  width: 100%; height: 30px; padding: 0 8px 0 28px; font-size: 12.5px;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
+}
+#navList { flex: 1 1 auto; overflow: auto; padding: 2px 8px 10px; }
+#navList .grp { color: var(--text-3); font-size: 11px; font-weight: 650; letter-spacing: .5px; padding: 10px 8px 4px; }
+#navList .nav {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  border: 1px solid transparent; background: transparent; color: var(--text);
+  padding: 7px 8px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.2;
+}
+#navList .nav:hover { background: var(--surface-3); }
+#navList .nav.on { background: var(--brand-soft); border-color: var(--brand-ring); color: var(--brand-ink); font-weight: 600; }
+#navList .nav .ic { width: 17px; height: 17px; flex: 0 0 17px; color: var(--brand-ink); }
+#navList .nav .nm { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#navList .nav .tag { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--surface); color: var(--text-3); border: 1px solid var(--line); }
+#navList .nav .tag.pro { background: var(--warn-bg); color: var(--warn); border-color: var(--line-strong); }
+#side .side-foot { border-top: 1px solid var(--line); padding: 9px 12px; font-size: 11.5px; color: var(--text-3); line-height: 1.65; user-select: text; }
+#side .side-foot b { color: var(--text); font-weight: 600; }
+
+/* ── 内容区：标签栏 + 页面 ─────────────────────────────────── */
+#content { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 0; }
+/* 标签栏外壳：中间是可横向滚动的标签条，两端是溢出时才出现的滚动按钮。
+   为什么要外壳：标签多到一屏放不下时（例如同时开 10+ 个模块），原来只能靠
+   overflow-x:auto 硬切——滚动条被 height:0 隐藏了，用户既看不出后面还有标签，
+   也没有任何可见的滚动手段，只能碰运气用触控板横扫。 */
+#tabwrap {
+  display: flex; align-items: stretch; min-width: 0;
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+}
+#tabwrap .tabnav {
+  flex: 0 0 24px; width: 24px; padding: 0; border: 0; background: transparent;
+  display: none; align-items: center; justify-content: center;
+  color: var(--text-2); transition: background var(--t-fast), color var(--t-fast);
+}
+#tabwrap.overflow .tabnav { display: flex; }
+#tabwrap .tabnav:hover { background: var(--surface-3); color: var(--text); }
+#tabwrap .tabnav[disabled] { opacity: .3; pointer-events: none; }
+#tabwrap .tabnav svg { width: 14px; height: 14px; }
+/* 两端箭头压住被切一半的标签，加一道内投影让“还有更多标签”这件事看得出来 */
+#tabwrap #tabPrev { box-shadow: 8px 0 10px -8px rgba(12, 38, 66, .38); }
+#tabwrap #tabNext { box-shadow: -8px 0 10px -8px rgba(12, 38, 66, .38); }
+html[data-theme="dark"] #tabwrap #tabPrev,
+html[data-theme="dark"] #tabwrap #tabNext { box-shadow: none; }
+#tabbar {
+  display: flex; align-items: flex-end; gap: 4px; height: 38px; padding: 5px 8px 0;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-behavior: smooth;
+}
+#tabbar::-webkit-scrollbar { height: 0; }
+#tabbar .tab {
+  display: flex; align-items: center; gap: 7px; max-width: 230px; flex: 0 0 auto;
+  height: 32px; padding: 0 8px 0 10px; font-size: 12.5px; color: var(--text-2);
+  background: var(--surface); border: 1px solid var(--line); border-bottom: 0;
+  border-radius: 8px 8px 0 0; position: relative;
+}
+#tabbar .tab .ic { width: 15px; height: 15px; flex: 0 0 15px; color: var(--brand-ink); }
+#tabbar .tab .tt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#tabbar .tab:hover { color: var(--text); background: var(--surface-3); }
+#tabbar .tab.on { color: var(--text); background: var(--surface-3); font-weight: 600; box-shadow: inset 0 -2px 0 var(--brand-strong); }
+#tabbar .tab .x { border: 0; background: transparent; color: inherit; padding: 1px; border-radius: 4px;
+  opacity: 0; transition: opacity var(--t-fast); }
+#tabbar .tab:hover .x, #tabbar .tab.on .x, #tabbar .tab:focus-visible .x { opacity: .6; }
+#tabbar .tab .x:hover { background: var(--err-bg); color: var(--err); opacity: 1; }
+#tabbar .tab .x svg { width: 12px; height: 12px; display: block; }
+#tabbar .tab .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: 0 0 6px; }
+#tabbar .tab .dot.off { background: var(--text-3); }
+#tabbar .tab-hint { color: var(--text-3); font-size: 12.5px; padding: 0 6px 8px; }
+
+#panes { position: relative; min-height: 0; background: var(--surface); }
+#panes .pane { position: absolute; inset: 0; display: none; }
+#panes .pane.on { display: block; }
+#panes .pane > .pane-body { position: absolute; inset: 0; overflow: auto; }
+#panes iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+html[data-theme="dark"] #panes iframe { background: #10161d; }
+#panes .frame-loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--surface); color: var(--text-3); font-size: 13px; }
+#panes .frame-loading .bar { width: 190px; height: 4px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin-top: 10px; }
+#panes .frame-loading .bar i { display: block; width: 40%; height: 100%; background: var(--brand-strong); animation: slide 1.1s ease-in-out infinite; }
+@keyframes slide { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
+/* 标签内嵌告警条（复用 desktop.html 的 showFrameAlert → .wm-alert 类名） */
+.wm-alert { margin: 0; padding: 7px 12px; font-size: 12px; background: var(--warn-bg); color: var(--warn);
+  border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+.wm-alert.no { background: var(--err-bg); color: var(--err); }
+.wm-alert a { color: inherit; font-weight: 600; text-decoration: underline; }
+.wm-alert svg { width: 15px; height: 15px; flex: 0 0 15px; }
+.pane-alert { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12.5px;
+  background: var(--warn-bg); color: var(--warn); border-bottom: 1px solid var(--line); }
+.pane-alert.err { background: var(--err-bg); color: var(--err); }
+.pane-alert svg { width: 15px; height: 15px; flex: 0 0 15px; }
+.pane-alert .grow { flex: 1 1 auto; }
+
+/* ── 弹出菜单（菜单行/账号胶囊用；自包含，不依赖桌面版的右键菜单样式）── */
+.popmenu {
+  position: fixed; z-index: 8600; min-width: 208px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius);
+  box-shadow: var(--shadow-pop); display: none;
+}
+.popmenu.open { display: block; }
+.popmenu .it {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 7px 9px;
+  border-radius: var(--radius-sm); color: var(--text); font-size: 12.5px;
+}
+.popmenu .it:hover { background: var(--surface-3); }
+.popmenu .it[disabled] { opacity: .45; pointer-events: none; }
+.popmenu .it.danger { color: var(--err); }
+.popmenu .it .ic { width: 15px; height: 15px; flex: 0 0 15px; color: var(--brand-ink); }
+.popmenu .it.danger .ic { color: var(--err); }
+.popmenu .it .lbl { flex: 1 1 auto; }
+.popmenu .it .kb { color: var(--text-3); font-size: 11px; }
+.popmenu .sep { height: 1px; margin: 5px 6px; background: var(--line); }
+
+/* 原生面板（控制中心/SOP/诊断/设置/关于/演示）在标签里的内边距。
+   max-width 之外还要居中：桌面窗口拉到 1700+ 时，内容原本死死贴在左边，
+   右侧空出一大条 —— 居中后阅读宽度不变，但整块面板落在视觉中轴上。 */
+#panes .wm-pane { padding: 14px 16px 22px; max-width: 1180px; margin: 0 auto; }
+
+/* ── 状态栏 ───────────────────────────────────────────────── */
+#statusbar {
+  display: flex; align-items: center; gap: 14px; height: 27px; padding: 0 12px;
+  background: var(--surface-2); border-top: 1px solid var(--line); color: var(--text-3); font-size: 11.5px;
+}
+#statusbar .st { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+#statusbar .st b { color: var(--text); font-weight: 600; }
+#statusbar .grow { flex: 1 1 auto; }
+#statusbar .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+#statusbar .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
+#statusbar .dot.err { background: var(--err); box-shadow: 0 0 0 3px var(--err-bg); }
+#statusbar .dot.warn { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-bg); }
+
+/* ── 账号胶囊 ─────────────────────────────────────────────── */
+.userchip { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); font-size: 12.5px; }
+.userchip:hover { background: var(--surface-3); }
+.userchip .av { width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 21px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong)); color: var(--on-brand); font-size: 11px; font-weight: 700; }
+.userchip .pl { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-ink); }
+
+/* ── 欢迎页（没有打开任何标签时）───────────────────────────── */
+.welcome { padding: 26px 30px; max-width: 1000px; }
+.welcome h2 { margin: 0 0 6px; font-size: 19px; }
+.welcome p.lead { color: var(--text-3); margin: 0 0 18px; font-size: 13px; }
+.welcome .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 10px; }
+.welcome .card-link { display: flex; align-items: flex-start; gap: 10px; text-align: left; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow-soft); }
+.welcome .card-link:hover { border-color: var(--brand-ring); }
+.welcome .card-link .ic { width: 20px; height: 20px; color: var(--brand-ink); flex: 0 0 20px; margin-top: 1px; }
+/* 标题与说明必须是块级：原来都是 <span>，两段文字会连成一行
+   （“控制中心连接数字人、文本播报…”），margin-top 也失效 */
+.welcome .card-link > span { display: block; min-width: 0; }
+.welcome .card-link .t { display: block; font-size: 13px; font-weight: 600; }
+.welcome .card-link .d { display: block; font-size: 11.5px; color: var(--text-3); line-height: 1.5; margin-top: 3px; }
+
+/* ── 窄屏：导航变抽屉 ─────────────────────────────────────── */
+/* 侧栏折叠按钮：宽屏和窄屏都要能看到（菜单里的同名项保留，作为快捷入口） */
+#navToggle { display: inline-flex; color: var(--text-2); }
+#navToggle:hover { color: var(--text); }
+@media (max-width: 900px) {
+  /* 关键：侧栏改成 position:fixed 之后就不在网格流里了，此时**必须只留一列**。
+     原来写的是 grid-template-columns:0 1fr（两列），#content 会顶到宽度为 0 的第一列，
+     实测窗口 900px 时 #content 宽度直接塌成 0，右边 900px 全是 body 的蓝底 —— 用户把
+     窗口吸附成半屏（1920 屏一半是 960，1366 屏一半只有 683）就会看到这个残局。 */
+  #body, html[data-nav="collapsed"] #body { grid-template-columns: 1fr; }
+  #navToggle { display: inline-flex; }
+  #side { position: fixed; z-index: 7000; top: 76px; bottom: 27px; left: 0; width: 252px;
+    transform: translateX(-104%); transition: transform .2s ease; box-shadow: var(--shadow-pop); visibility: visible; }
+  html[data-nav="open"] #side { transform: none; }
+  /* 抽屉打开时内容区被盖住，给个可点的遮罩，点一下收起（原来只能再点一次汉堡） */
+  html[data-nav="open"] #content::after {
+    content: ''; position: fixed; inset: 76px 0 27px 0; z-index: 6500; background: rgba(12, 38, 66, .22);
+  }
+  #titlebar .brand small, #titlebar .crumb .sub, #menubar .kb { display: none; }
+  #titlebar .btn-label { display: none; }
+  #statusbar .hide-sm { display: none; }
+  #panes .wm-pane { padding: 12px 12px 20px; }
+  #tabbar .tab { max-width: 150px; }
+  .tabs { overflow: auto; }
+}
+/* 服务端页面在窄屏/小窗口里的最小可用宽度 */
+@media (max-width: 620px) {
+  #titlebar { gap: 8px; }
+  #panes iframe { min-width: 320px; }
+  .welcome { padding: 18px 16px; }
+}
+/* ── 键盘可达性 ───────────────────────────────────────────────
+   外壳控件原来没有任何焦点样式：用 Tab 键在导航里走一圈，光标在哪完全看不出来。
+   只在键盘操作时显示焦点环（:focus-visible），鼠标点击不会出现多余描边。 */
+#navList .nav:focus-visible,
+#tabbar .tab:focus-visible,
+#tabwrap .tabnav:focus-visible,
+.app-btn:focus-visible,
+.userchip:focus-visible,
+#menubar .mi:focus-visible,
+.popmenu .it:focus-visible,
+#side input:focus-visible {
+  outline: 2px solid var(--brand-ring); outline-offset: 1px;
+}
+#side input:focus { border-color: var(--brand-strong); }
+
+/* 弹出菜单的锚点高亮（标签/账号胶囊用；菜单栏按钮仍用 .mi.on） */
+.pop-anchor { background: var(--surface-3); }
+
+/* ═══════════ 以下样式复用 desktop.html：通知/弹窗/控件/面板块 ═══════════ */
+/* ═══════════════════════════ 8. 通知 / 弹窗 / 日历 ═══════════════════════════ */
+#toasts{position:fixed;z-index:9000;right:14px;bottom:calc(var(--taskbar-h) + 14px);display:flex;flex-direction:column;gap:9px;align-items:flex-end;pointer-events:none}
+html[data-taskbar="top"] #toasts{top:calc(var(--taskbar-h) + 14px);bottom:auto}
+.toast{pointer-events:auto;width:min(340px,calc(100vw - 28px));display:flex;gap:10px;padding:11px 12px;border-radius:var(--radius);
+  background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--line-strong);box-shadow:var(--shadow-pop);
+  animation:toastIn .2s cubic-bezier(.2,.8,.3,1);cursor:pointer}
+@keyframes toastIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+.toast.out{opacity:0;transform:translateX(18px);transition:all var(--t-base)}
+.toast .ti{width:26px;height:26px;flex:0 0 26px;border-radius:8px;display:grid;place-items:center;background:var(--info-bg);color:var(--info)}
+.toast .ti svg{width:15px;height:15px}
+.toast.ok .ti{background:var(--ok-bg);color:var(--ok)}
+.toast.warn .ti{background:var(--warn-bg);color:var(--warn)}
+.toast.err .ti{background:var(--err-bg);color:var(--err)}
+.toast .tx{min-width:0}
+.toast .tx b{display:block;font-size:12.5px;margin-bottom:1px}
+.toast .tx p{margin:0;font-size:11.5px;color:var(--text-2);word-break:break-word}
+
+#notifyPanel{position:fixed;z-index:8500;right:12px;bottom:calc(var(--taskbar-h) + 12px);width:min(370px,calc(100vw - 24px));max-height:min(520px,70vh);
+  display:none;flex-direction:column;background:var(--glass);backdrop-filter:blur(22px);border:1px solid var(--line-strong);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-pop);overflow:hidden}
+#notifyPanel.open{display:flex}
+.np-head{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600}
+.np-head button{margin-left:auto;font-size:11.5px;color:var(--brand-deep)}
+html[data-theme="dark"] .np-head button{color:var(--brand)}
+#npList{overflow:auto;padding:8px}
+.np-item{display:flex;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);align-items:flex-start}
+.np-item:hover{background:var(--line)}
+.np-item .ti{width:22px;height:22px;flex:0 0 22px;border-radius:6px;display:grid;place-items:center;background:var(--info-bg);color:var(--info)}
+.np-item .ti svg{width:13px;height:13px}
+.np-item .tx{min-width:0;flex:1}
+.np-item .tx b{font-size:12px;display:block}
+.np-item .tx p{margin:1px 0 0;font-size:11.5px;color:var(--text-2);word-break:break-word}
+.np-item .tm{font-size:10.5px;color:var(--text-3);white-space:nowrap}
+.np-empty{padding:22px 12px;text-align:center;color:var(--text-3);font-size:12px}
+
+#calendarPop{position:fixed;z-index:8500;right:12px;bottom:calc(var(--taskbar-h) + 12px);width:272px;display:none;padding:12px;
+  background:var(--glass);backdrop-filter:blur(22px);border:1px solid var(--line-strong);border-radius:var(--radius-lg);box-shadow:var(--shadow-pop)}
+#calendarPop.open{display:block}
+.cal-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cal-head b{font-size:13px}
+.cal-head button{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--text-2)}
+.cal-head button:hover{background:var(--line)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11.5px}
+.cal-grid .dow{color:var(--text-3);font-size:10.5px;padding:2px 0}
+.cal-grid .d{padding:5px 0;border-radius:6px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.cal-grid .d.other{opacity:.35}
+.cal-grid .d.today{background:var(--brand-strong);color:var(--on-brand);font-weight:700}
+.cal-foot{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);font-size:11.5px;color:var(--text-3);display:flex;justify-content:space-between;align-items:center;gap:8px}
+
+#modalLayer{position:fixed;inset:0;z-index:9200;display:none;place-items:center;background:rgba(8,24,40,.34);backdrop-filter:blur(3px)}
+#modalLayer.open{display:grid}
+.modal{width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 80px);display:flex;flex-direction:column;background:var(--glass-solid);
+  border:1px solid var(--line-strong);border-radius:var(--radius-lg);box-shadow:var(--shadow-pop);animation:winIn .16s ease-out;overflow:hidden}
+.modal header{padding:16px 18px 6px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:9px}
+.modal header svg{width:17px;height:17px;color:var(--brand-deep)}
+html[data-theme="dark"] .modal header svg{color:var(--brand)}
+.modal .content{padding:6px 18px 14px;font-size:13px;color:var(--text-2);overflow:auto;user-select:text}
+.modal .content p{margin:0 0 9px}
+.modal .content code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+.modal footer{padding:12px 16px;display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--line);background:var(--surface-2)}
+.modal input[type=text],.modal input[type=password],.modal textarea{width:100%;margin-top:4px}
+
+/* ═══════════════════════════ 9. 通用控件 ═══════════════════════════ */
+.btn{height:32px;padding:0 13px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--line-strong);
+  color:var(--text);font-size:12.5px;display:inline-flex;align-items:center;gap:7px;transition:background var(--t-fast),border-color var(--t-fast),transform var(--t-fast)}
+.btn:hover{background:var(--surface-3)}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:15px;height:15px}
+.btn.primary{background:linear-gradient(180deg,var(--brand),var(--brand-strong));border-color:var(--brand-deep);color:var(--on-brand);font-weight:600;box-shadow:0 3px 10px var(--brand-ring)}
+.btn.primary:hover{filter:brightness(1.04)}
+.btn.ghost{background:transparent;border-color:var(--line-strong)}
+.btn.danger{background:var(--err-bg);border-color:var(--err);color:var(--err);font-weight:600}
+.btn.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);font-weight:600}
+.btn.sm{height:26px;padding:0 9px;font-size:11.5px}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.btn.loading{pointer-events:none;position:relative;color:transparent!important}
+.btn.loading::after{content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.btn.ghost.loading::after,.btn:not(.primary).loading::after{border-color:var(--brand-ring);border-top-color:var(--brand-strong)}
+input[type=text],input[type=password],input[type=number],input[type=search],select,textarea{
+  height:32px;padding:0 10px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line-strong);color:var(--text);outline:none;transition:border-color var(--t-fast),box-shadow var(--t-fast)}
+textarea{height:auto;padding:9px 10px;resize:vertical;line-height:1.55;font-family:inherit;min-height:74px}
+input:focus,select:focus,textarea:focus{border-color:var(--brand-strong);box-shadow:0 0 0 3px var(--brand-ring)}
+label.chk{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-2);cursor:pointer}
+input[type=checkbox],input[type=radio]{accent-color:var(--brand-strong);width:15px;height:15px;cursor:pointer}
+.switch{position:relative;width:38px;height:21px;border-radius:999px;background:var(--line-strong);transition:background var(--t-fast);flex:0 0 38px}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:transform var(--t-fast);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.switch.on{background:var(--brand-strong)}
+.switch.on::after{transform:translateX(17px)}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field>span{font-size:11.5px;color:var(--text-3)}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.hint{font-size:11.5px;color:var(--text-3);line-height:1.6}
+
+/* 面板通用块：卡片 / 键值 / 徽标 / 表格 / 日志 */
+.pane-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.pane-head h2{margin:0;font-size:15px;font-weight:600}
+.pane-head .sp{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;box-shadow:var(--shadow-soft)}
+.card+.card{margin-top:12px}
+.card h3{margin:0 0 10px;font-size:12.5px;font-weight:600;color:var(--text-2);display:flex;align-items:center;gap:8px}
+.card h3 svg{width:14px;height:14px;color:var(--brand-deep)}
+html[data-theme="dark"] .card h3 svg{color:var(--brand)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12.5px;align-items:center}
+.kv dt{color:var(--text-3);white-space:nowrap}
+.kv dd{margin:0;color:var(--text);word-break:break-word;user-select:text}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stat{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px}
+.stat .lab{font-size:11px;color:var(--text-3);margin-bottom:4px}
+.stat .val{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .val.sm{font-size:12.5px;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:5px;height:21px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--surface-3);color:var(--text-2)}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.err{background:var(--err-bg);color:var(--err)}
+.badge.info{background:var(--info-bg);color:var(--info)}
+table.tbl{width:100%;border-collapse:collapse;font-size:12px}
+table.tbl th,table.tbl td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+table.tbl th{color:var(--text-3);font-weight:500;font-size:11.5px}
+table.tbl tr:last-child td{border-bottom:0}
+.chk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.chk-list li{display:flex;gap:9px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--line);align-items:flex-start}
+.chk-list li .m{width:17px;height:17px;flex:0 0 17px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--surface-3);color:var(--text-3)}
+.chk-list li.pass .m{background:var(--ok-bg);color:var(--ok)}
+.chk-list li.block .m{background:var(--err-bg);color:var(--err)}
+.chk-list li.warn .m{background:var(--warn-bg);color:var(--warn)}
+.chk-list li .t{min-width:0;flex:1}
+.chk-list li .t b{font-size:12.5px;font-weight:500;display:block}
+.chk-list li .t span{font-size:11.5px;color:var(--text-3)}
+.log{font-family:var(--mono);font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:10px 11px;max-height:230px;overflow:auto;white-space:pre-wrap;word-break:break-word;user-select:text;color:var(--text-2)}
+.log .er{color:var(--err)}.log .wa{color:var(--warn)}.log .ok{color:var(--ok)}
+.progress{height:8px;border-radius:999px;background:var(--surface-3);overflow:hidden}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-strong));border-radius:999px;transition:width var(--t-base)}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:999px;padding:3px;gap:2px}
+.seg button{height:26px;padding:0 12px;border-radius:999px;font-size:12px;color:var(--text-2)}
+.seg button.on{background:var(--brand-strong);color:var(--on-brand);font-weight:600}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tabs button{padding:8px 12px;font-size:12.5px;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--text);border-bottom-color:var(--brand-strong);font-weight:600}
+.swatches{display:flex;gap:9px;flex-wrap:wrap}
+.sw{width:46px;height:32px;border-radius:var(--radius-sm);border:2px solid transparent;box-shadow:inset 0 0 0 1px var(--line-strong);cursor:pointer}
+.sw.on{border-color:var(--text);box-shadow:0 0 0 3px var(--brand-ring)}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.wp-opt{border-radius:var(--radius-sm);border:2px solid transparent;box-shadow:inset 0 0 0 1px var(--line-strong);height:58px;position:relative;overflow:hidden}
+.wp-opt.on{border-color:var(--brand-strong);box-shadow:0 0 0 3px var(--brand-ring)}
+.wp-opt span{position:absolute;left:0;right:0;bottom:0;font-size:10.5px;text-align:center;background:rgba(6,26,44,.5);color:#fff;padding:2px 0}
+.set-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.set-row:last-child{border-bottom:0}
+.set-row .info{flex:1;min-width:0}
+.set-row .info b{display:block;font-size:12.5px;font-weight:500}
+.set-row .info span{font-size:11.5px;color:var(--text-3)}
+.empty{padding:26px 14px;text-align:center;color:var(--text-3);font-size:12.5px}
+.banner{display:flex;gap:9px;align-items:center;padding:9px 12px;border-radius:var(--radius-sm);background:var(--info-bg);color:var(--info);font-size:12px;margin-bottom:12px}
+.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner svg{width:15px;height:15px;flex:0 0 15px}
+.demo-stage{position:relative;width:100%;aspect-ratio:9/16;max-height:100%;background:
+  radial-gradient(60% 40% at 50% 18%, #2b5876 0%, rgba(43,88,118,0) 70%), linear-gradient(180deg,#0e2233,#16394f);
+  border-radius:var(--radius);overflow:hidden;display:grid;place-items:center}
+.demo-stage canvas{width:100%;height:100%;display:block}
+
+/* ═══════════════════════════ 10. 启动画面 ═══════════════════════════ */
+#boot{position:fixed;inset:0;z-index:9500;background:linear-gradient(160deg,#0f2b40,#123a55 55%,#0a1f2e);
+  display:grid;place-items:center;color:#dff1ff;transition:opacity .3s ease}
+#boot.hide{opacity:0;pointer-events:none}
+#boot .bx{width:min(400px,84vw);text-align:center}
+#boot .mark{width:64px;height:64px;margin:0 auto 16px;border-radius:18px;display:grid;place-items:center;
+  background:linear-gradient(140deg,var(--brand),var(--brand-strong));color:var(--on-brand);box-shadow:0 12px 34px rgba(56,189,248,.34)}
+#boot .mark svg{width:34px;height:34px}
+#boot h1{margin:0 0 3px;font-size:17px;font-weight:600;letter-spacing:.3px}
+#boot p{margin:0 0 18px;font-size:12px;color:#9dc4dd}
+#boot .steps{text-align:left;font-size:12px;color:#a9cee4;display:flex;flex-direction:column;gap:6px;margin-bottom:16px;min-height:66px}
+#boot .steps i{font-style:normal;color:#5ee0b0;margin-right:6px}
+#boot .progress i{background:linear-gradient(90deg,var(--brand),#7ff0c8)}
+#boot .foot{margin-top:10px;font-size:11px;color:#7ea6bf}
+
+
+/* ═══════════ 外壳对复用样式的覆盖（必须放在最后）═══════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   外壳对「复用样式」的覆盖（本文件必须放在 css_notify / css_controls 之后）
+   -------------------------------------------------------------------
+   复用的样式来自网页端 desktop.html，那里的底部坐标是按「任务栏 52px」算的：
+       #toasts{bottom:calc(var(--taskbar-h) + 14px)}   → 66px
+   桌面应用根本没有任务栏，底部只有 27px 状态栏，结果提示条悬在内容区中间，
+   正好压住右下角的卡片。这里按状态栏高度重新贴边。
+   ═══════════════════════════════════════════════════════════════════ */
+#toasts { bottom: calc(27px + 10px); right: 12px; }
+html[data-taskbar="top"] #toasts { top: auto; }
+
+/* 提示条最多 3 条同时在场（新的在下）：再多会把内容区右下角整块盖住。
+   toast() 内部只做「超过 4 条删最旧」，这里补一道显示上限，不改复用代码。 */
+/* 最多两条同时在场：三条叠起来会把右下角的卡片整块盖住（截图复核时很明显） */
+#toasts .toast:not(:nth-last-child(-n+2)) { display: none; }
+#toasts .toast { width: min(300px, calc(100vw - 28px)); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   深色主题补全
+   -------------------------------------------------------------------
+   原设计令牌只覆盖了 text / surface / line / 状态色，漏了「品牌浅色」这一组：
+   --brand-soft(#e0f2fe) 与 --brand-deep(#0284c7) 在深色底下**不会反转** ——
+   选中项、套餐徽标会变成一块浅蓝底配深蓝字，在深色界面里非常刺眼；导航图标
+   用的又是 --brand-deep，压深色底上几乎看不清。
+
+   这里补三件事：
+   1. --brand-soft / --brand-tint 改成按当前主色与背景混出来的半透明色，
+      既跟随主题深浅，也跟随“设置 → 主色”换色；
+   2. 新增 --brand-ink：外壳里所有“品牌色文字/图标”都改用它，浅色主题取原
+      --brand-deep，深色主题反向取亮色；
+   3. color-mix 不被支持时（很旧的 WebView2）声明失效，自动退回原来的值，
+      也就是维持现状，不会更糟。
+   ═══════════════════════════════════════════════════════════════════ */
+:root { --brand-ink: var(--brand-deep); }
+html[data-theme="dark"] {
+  --brand-soft: color-mix(in srgb, var(--brand) 18%, var(--surface));
+  --brand-tint: color-mix(in srgb, var(--brand) 24%, transparent);
+  --brand-ink: color-mix(in srgb, var(--brand) 55%, #ffffff);
+}
+
+/* ═══════════ 视觉精修层（只影响桌面外壳，网页端不受影响）═══════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   视觉精修层（polish）—— 只作用于桌面外壳 app.html
+   ---------------------------------------------------------------------------
+   为什么要单独一层：
+   外壳骨架（part_layout.css）与业务面板样式（desktop.html 第 8/9 节复用）都已在
+   真实服务上验证过，本文件只做「外观」覆盖，不改任何 DOM、类名与交互逻辑，
+   因此网页端 desktop.html / common.css 完全不受影响。
+
+   精修要点（对应 2026-10-26 的界面复核）：
+   1. 分层：标题白 → 菜单/标签淡灰 → 内容区最淡 → 卡片纯白浮起，卡片不再和
+      白底粘在一起（原来 #panes 也是 --surface，边界只剩 1px 线）。
+   2. 顶部三条 chrome 收干净：菜单行与标签栏同底色连成一体，标签改胶囊式，
+      选中态用「白底 + 阴影」而不是整条下划线。
+   3. 左导航：选中项白底 + 左侧品牌竖条 + 轻阴影（凸起感），图标配淡品牌底。
+   4. 内容：卡片圆角 12、柔影；统计格子统一高度，换行不再错位；
+      小标题图标做成淡蓝圆角块，面板标题加大到 18px。
+   5. 状态栏：项之间加细竖线，读起来是「一组一组」而不是一串字。
+   6. 深色：内容底/卡片/描边全套重算，避免浅色块在深色界面里发白刺眼。
+   7. 所有动效尊重 prefers-reduced-motion。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 0. 精修用的局部令牌（不覆盖原设计令牌，避免影响复用样式）── */
+:root {
+  --canvas: #e8f0f8;
+  --canvas-2: #dfe9f4;
+  --chrome: #ffffff;
+  --chrome-2: #f3f8fd;
+  --card-line: rgba(15, 40, 70, .07);
+  --card-shadow: 0 1px 2px rgba(12, 38, 66, .06), 0 16px 32px -22px rgba(12, 38, 66, .55);
+  --card-shadow-hover: 0 2px 5px rgba(12, 38, 66, .07), 0 20px 38px -20px rgba(12, 38, 66, .5);
+  --inset-hi: inset 0 1px 0 rgba(255, 255, 255, .7);
+  --hairline: rgba(15, 40, 70, .09);
+}
+html[data-theme="dark"] {
+  --canvas: #0c141d;
+  --canvas-2: #101923;
+  --chrome: #161f2a;
+  --chrome-2: #131c26;
+  --card-line: rgba(160, 196, 226, .12);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .38), 0 18px 34px -20px rgba(0, 0, 0, .78);
+  --card-shadow-hover: 0 2px 6px rgba(0, 0, 0, .42), 0 22px 40px -18px rgba(0, 0, 0, .8);
+  --inset-hi: inset 0 1px 0 rgba(255, 255, 255, .05);
+  --hairline: rgba(160, 196, 226, .14);
+}
+
+/* ── 1. 窗口底与主体背景 ─────────────────────────────────────── */
+body {
+  background:
+    radial-gradient(1200px 620px at 8% -12%, rgba(56, 189, 248, .16), transparent 62%),
+    radial-gradient(900px 520px at 96% 4%, rgba(45, 212, 191, .10), transparent 60%),
+    linear-gradient(180deg, var(--canvas) 0%, var(--canvas-2) 100%);
+}
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(1200px 620px at 8% -12%, rgba(56, 189, 248, .10), transparent 62%),
+    radial-gradient(900px 520px at 96% 4%, rgba(45, 212, 191, .06), transparent 60%),
+    linear-gradient(180deg, var(--canvas) 0%, var(--canvas-2) 100%);
+}
+
+/* ── 2. 标题行：玻璃质感 + 品牌标的立体感 ─────────────────────── */
+#titlebar {
+  height: 46px;
+  gap: 11px;
+  /* 兜底在前：老 WebView2 不认 color-mix 时退回纯白，不会露出 body 的蓝底 */
+  background: var(--chrome);
+  box-shadow: var(--inset-hi);
+  border-bottom: 1px solid var(--hairline);
+  position: relative;
+  z-index: 3;
+}
+@supports not (backdrop-filter: blur(1px)) { #titlebar { background: var(--chrome); } }
+#titlebar::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brand-ring) 22%, transparent 62%);
+  opacity: .5; pointer-events: none;
+}
+#titlebar .brand { font-size: 14.5px; letter-spacing: .2px; }
+#titlebar .brand .logo {
+  width: 28px; height: 28px; flex: 0 0 28px; border-radius: 9px;
+  background: linear-gradient(150deg, var(--brand) 0%, var(--brand-strong) 62%, var(--brand-deep) 100%);
+  box-shadow: 0 4px 12px -2px var(--brand-ring), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+#titlebar .brand .logo svg { width: 16px; height: 16px; }
+#titlebar .brand small {
+  font-size: 10px; letter-spacing: .4px; padding: 2px 7px; border-radius: 999px;
+  background: transparent; border: 1px solid var(--line-strong); color: var(--text-3);
+}
+#titlebar .crumb h1 { font-size: 13.5px; font-weight: 600; color: var(--text); }
+#titlebar .crumb .sub { font-size: 11.5px; color: var(--text-3); }
+/* 面包屑与品牌之间一道细竖线，两段信息不再糊在一起 */
+#titlebar .crumb::before {
+  content: ''; width: 1px; height: 15px; margin-right: 3px; background: var(--line-strong); opacity: .7;
+}
+
+/* 标题行按钮统一为 9px 圆角，主按钮带内高光 */
+#titlebar .app-btn { border-radius: 9px; height: 30px; }
+#titlebar .app-btn:hover { background: var(--surface-3); border-color: var(--line-strong); }
+#titlebar .app-btn.primary { box-shadow: 0 3px 10px -2px var(--brand-ring), inset 0 1px 0 rgba(255, 255, 255, .38); }
+#titlebar .tb-chip, #titlebar .app-chip { height: 30px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
+#titlebar .userchip { height: 30px; border-radius: 999px; padding: 0 6px 0 5px; gap: 7px; }
+#titlebar .userchip .av { width: 22px; height: 22px; flex: 0 0 22px; font-size: 11px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+#titlebar .userchip .pl { margin-right: 3px; }
+
+/* ── 3. 菜单行：与标签栏连成一条 chrome，弱化存在感 ───────────── */
+/* 菜单行与标题行合并成一层白色 chrome：
+   原来是「白标题 / 浅灰菜单 / 浅灰标签」三层，眼睛要跨三道横线才到内容。
+   现在菜单行的背景与标题行一致、去掉上边框，只在底部留一条细线，
+   视觉上就是"标题 + 菜单"一行，下面的标签栏才是第二层。 */
+#menubar {
+  height: 26px; gap: 1px; padding: 0 10px;
+  background: var(--chrome);
+  border-top: 0;
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset;
+}
+#menubar .mi {
+  padding: 3px 10px; border-radius: 7px; font-size: 12px; color: var(--text-2);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+#menubar .mi:hover, #menubar .mi.on { background: color-mix(in srgb, var(--brand) 10%, transparent); color: var(--text); }
+#menubar .kb { font-size: 11px; gap: 12px; opacity: .85; }
+#menubar .kb kbd {
+  background: var(--surface); border-color: var(--hairline); border-radius: 5px;
+  box-shadow: 0 1px 0 var(--hairline); padding: 1px 5px; font-size: 10.5px;
+}
+
+/* ── 4. 左导航 ──────────────────────────────────────────────── */
+#side {
+  background: var(--chrome-2);
+  background: linear-gradient(180deg, var(--chrome-2) 0%, color-mix(in srgb, var(--chrome-2) 72%, var(--canvas)) 100%);
+  border-right: 1px solid var(--hairline);
+}
+#side .side-head { padding: 10px 10px 6px; }
+#side input {
+  height: 32px; border-radius: 9px; font-size: 12.5px;
+  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border-color: var(--hairline);
+  box-shadow: inset 0 1px 2px rgba(12, 38, 66, .04);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+}
+#side input:hover { background: var(--surface); }
+#side input:focus { background: var(--surface); box-shadow: 0 0 0 3px var(--brand-ring); }
+#navList { padding: 2px 8px 12px; }
+#navList .grp {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1.1px; color: var(--text-3);
+  padding: 12px 9px 5px; text-transform: none;
+}
+#navList .grp:first-child { padding-top: 6px; }
+/* 导航项：单行「图标 + 名字」，32px。不做两行说明 ——
+   17 个模块每个挂一句说明，侧栏就成了密密麻麻的清单，扫起来更慢。
+   模块说明改由顶部说明条（当前模块）与 hover 提示承担。 */
+#navList .nav {
+  position: relative; height: 32px; padding: 0 9px; gap: 9px; align-items: center;
+  border-radius: 8px; border: 1px solid transparent; font-size: 13px; color: var(--text-2);
+  transition: background var(--t-fast), color var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+}
+#navList .nav .ic { width: 16px; height: 16px; flex: 0 0 16px; color: var(--text-3); margin-top: 0; transition: color var(--t-fast); }
+#navList .nav .nm { flex: 1 1 auto; font-size: 13px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#navList .nav .tag { flex: 0 0 auto; white-space: nowrap; }
+#navList .nav .tag.open-dot {
+  position: absolute; right: 10px; top: 50%; margin-top: -4px;
+  width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--ok); box-shadow: 0 0 0 2px var(--ok-bg);
+}
+/* 已打开时给名字让出右侧 16px，避免压在绿点上 */
+#navList .nav:has(.open-dot) .nm { padding-right: 14px; }
+#navList .grp { padding: 9px 9px 4px; }
+#navList .nav:hover { background: color-mix(in srgb, var(--surface) 78%, transparent); color: var(--text); }
+#navList .nav:hover .ic { color: var(--brand-ink); }
+/* 选中：白底浮起 + 左侧品牌竖条（凸起感比“浅蓝块”更像原生软件） */
+#navList .nav.on {
+  background: var(--surface);
+  border-color: var(--card-line);
+  color: var(--brand-ink);
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(12, 38, 66, .06), 0 6px 14px -10px rgba(12, 38, 66, .4);
+}
+#navList .nav.on .ic { color: var(--brand-ink); }
+#navList .nav.on::before {
+  content: ''; position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px;
+  border-radius: 0 3px 3px 0; background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+}
+#navList .nav .tag { font-size: 10px; padding: 1px 6px; background: transparent; }
+#navList .nav .tag.pro { background: var(--warn-bg); border-color: transparent; }
+/* 侧栏底部压成一行（服务地址 · 账号），与底部状态栏不重复 */
+#side .side-foot {
+  background: transparent;
+  border-top: 1px solid var(--hairline);
+  padding: 8px 13px; font-size: 10.5px; line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── 5. 标签栏：胶囊式标签 ─────────────────────────────────── */
+#tabwrap {
+  background: var(--chrome-2);
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: 0 6px 12px -12px rgba(12, 38, 66, .5);
+}
+#tabbar { height: 38px; padding: 5px 10px; gap: 5px; align-items: center; }
+#tabbar .tab {
+  height: 28px; padding: 0 9px 0 11px; gap: 7px; max-width: 220px;
+  border-radius: 999px; border: 1px solid transparent; background: transparent;
+  color: var(--text-2); font-size: 12.5px;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+#tabbar .tab .ic { width: 14px; height: 14px; flex: 0 0 14px; color: var(--text-3); }
+#tabbar .tab:hover { background: color-mix(in srgb, var(--surface) 72%, transparent); color: var(--text); }
+#tabbar .tab:hover .ic { color: var(--brand-ink); }
+#tabbar .tab.on {
+  background: var(--surface); border-color: var(--card-line); color: var(--text);
+  font-weight: 650; box-shadow: 0 1px 2px rgba(12, 38, 66, .06), 0 4px 10px -6px rgba(12, 38, 66, .35);
+}
+#tabbar .tab.on .ic { color: var(--brand-ink); }
+#tabbar .tab.on::after {
+  content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px;
+  border-radius: 2px; background: linear-gradient(90deg, var(--brand), var(--brand-strong));
+}
+#tabbar .tab .x:hover { background: var(--err-bg); color: var(--err); }
+#tabwrap .tabnav { color: var(--text-3); }
+#tabwrap .tabnav:hover { background: color-mix(in srgb, var(--surface) 70%, transparent); }
+
+/* ── 6. 内容区与卡片 ───────────────────────────────────────── */
+#panes { background: var(--canvas); }
+#panes > .pane.on { animation: paneIn .16s ease-out both; }
+@keyframes paneIn { from { opacity: .55; } to { opacity: 1; } }
+
+#panes .wm-pane { padding: 20px 24px 30px; max-width: 1240px; }
+/* 页面标题左侧加一道品牌竖条：面板没有卡片包裹，标题悬在空中会显得“没有根”，
+   竖条给了它一个锚点，也让整页的视觉重心落在左上角。 */
+#panes .pane-head { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+#panes .pane-head h2 {
+  position: relative; padding-left: 12px;
+  font-size: 18px; font-weight: 650; letter-spacing: -.2px;
+}
+#panes .pane-head h2::before {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px;
+  border-radius: 3px; background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+}
+
+#panes .card {
+  background: var(--surface);
+  border: 1px solid var(--card-line);
+  border-radius: 12px;
+  padding: 15px 17px;
+  box-shadow: var(--card-shadow);
+}
+#panes .card + .card { margin-top: 16px; }
+#panes .card h3 {
+  margin: 0 0 12px; font-size: 13.5px; font-weight: 650; color: var(--text); gap: 9px;
+  letter-spacing: .1px;
+}
+/* 小标题图标：淡蓝圆角块，比裸线条图标更有“卡片头”的样子 */
+#panes .card h3 > svg {
+  width: 15px; height: 15px; padding: 3px; box-sizing: content-box;
+  border-radius: 7px; background: var(--brand-soft); color: var(--brand-ink) !important;
+}
+#panes .grid2 { gap: 16px; }
+#panes .card .hint { color: var(--text-3); }
+
+/* 统计格：统一最小高度，两行文字的格子不再把邻居顶歪。
+   2026-10-26 二次调整：**不再给它外套一层白卡** —— 面板标题 → 白卡 → 格子
+   是三层嵌套，视觉上"框套框"。现在每个格子自己就是一张小卡，直接摆在画布上，
+   少一层边框，也宽出约 20px（原来被外层 padding 吃掉）。 */
+#panes .wm-pane > .stats {
+  background: none; border: 0; border-radius: 0; padding: 0;
+  margin-bottom: 18px; box-shadow: none;
+}
+#panes .stats { gap: 12px; align-items: stretch; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }
+#panes .stat {
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  min-height: 64px; padding: 10px 13px; border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--card-line);
+  box-shadow: 0 1px 2px rgba(12, 38, 66, .05), 0 10px 22px -18px rgba(12, 38, 66, .42);
+}
+#panes .stat .lab { font-size: 11px; color: var(--text-3); letter-spacing: .2px; }
+#panes .stat .val { font-size: 15px; font-weight: 650; letter-spacing: -.1px; }
+#panes .stat .val.sm { font-size: 12px; font-weight: 500; line-height: 1.4; }
+
+/* 按钮：主按钮轻微内高光，危险按钮用描边强调 */
+#panes .btn { border-radius: 9px; }
+#panes .btn.primary {
+  box-shadow: 0 3px 10px -3px var(--brand-ring), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+#panes .btn.danger, #panes .btn.warn { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
+#panes .btn:hover { border-color: var(--line-strong); }
+
+/* 输入控件统一圆角与聚焦环 */
+#panes input[type=text], #panes input[type=password], #panes input[type=number],
+#panes input[type=search], #panes select, #panes textarea { border-radius: 9px; }
+
+/* 设置页：整行可感知，hover 有一层极淡的品牌底 */
+#panes .set-row { padding: 12px 10px; border-radius: 9px; border-bottom-color: var(--hairline); }
+#panes .set-row:hover { background: color-mix(in srgb, var(--brand) 6%, transparent); }
+#panes .set-row .info b { font-size: 12.5px; font-weight: 600; }
+
+/* 分段控件 / 标签页 */
+#panes .seg { background: color-mix(in srgb, var(--surface-2) 80%, var(--surface)); }
+#panes .seg button.on { box-shadow: 0 2px 6px -3px var(--brand-ring); }
+#panes .tabs { border-bottom-color: var(--hairline); gap: 6px; }
+#panes .tabs button { border-radius: 8px 8px 0 0; transition: color var(--t-fast), background var(--t-fast); }
+#panes .tabs button:hover { color: var(--text); background: color-mix(in srgb, var(--brand) 6%, transparent); }
+
+/* 表格：表头淡底、行悬停高亮、去掉最外圈竖线 */
+#panes table.tbl { border-radius: 9px; overflow: hidden; }
+#panes table.tbl th {
+  background: var(--surface-2); color: var(--text-2); font-weight: 600;
+  border-bottom: 1px solid var(--hairline);
+}
+#panes table.tbl tbody tr { transition: background var(--t-fast); }
+#panes table.tbl tbody tr:hover { background: color-mix(in srgb, var(--brand) 5%, transparent); }
+#panes table.tbl td { border-bottom-color: var(--hairline); }
+
+/* 日志框 / 键值 / 徽标 */
+#panes .log {
+  border-radius: 10px; border-color: var(--card-line); background: var(--surface-2);
+  box-shadow: inset 0 1px 2px rgba(12, 38, 66, .04); line-height: 1.65;
+}
+#panes .badge { font-weight: 650; letter-spacing: .1px; }
+#panes .banner { border-radius: 10px; border: 1px solid color-mix(in srgb, var(--info) 22%, transparent); }
+#panes .banner.warn { border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
+#panes .chk-list li { background: var(--surface-2); border-color: var(--card-line); border-radius: 9px; }
+#panes .empty { color: var(--text-3); }
+
+/* 欢迎页：图标做成色块，卡片 hover 微抬升 */
+#panes .welcome { padding: 28px 32px; max-width: 1120px; margin: 0 auto; }
+#panes .welcome h2 { font-size: 21px; font-weight: 650; letter-spacing: -.3px; }
+#panes .welcome p.lead { font-size: 13px; margin-bottom: 20px; }
+#panes .welcome .grid { gap: 12px; }
+#panes .welcome .card-link {
+  border-radius: 12px; padding: 13px 14px; border-color: var(--card-line);
+  box-shadow: var(--card-shadow);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+}
+#panes .welcome .card-link:hover {
+  transform: translateY(-2px); box-shadow: var(--card-shadow-hover);
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--card-line));
+}
+#panes .welcome .card-link .ic {
+  width: 32px; height: 32px; flex: 0 0 32px; padding: 7px; box-sizing: border-box;
+  border-radius: 10px; background: var(--brand-soft); color: var(--brand-ink) !important;
+}
+#panes .welcome .card-link .t { font-size: 13px; font-weight: 650; }
+
+/* ── 7. 状态栏：分组竖线 ───────────────────────────────────── */
+#statusbar {
+  height: 28px; gap: 0; padding: 0 8px 0 4px;
+  background: var(--chrome-2); border-top: 1px solid var(--hairline);
+  font-size: 12px;
+}
+#statusbar .st { padding: 0 11px; position: relative; height: 100%; }
+#statusbar .st + .st::before {
+  content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 11px; background: var(--line-strong); opacity: .55;
+}
+#statusbar .st b { font-variant-numeric: tabular-nums; }
+#statusbar .dot { transition: background var(--t-base), box-shadow var(--t-base); }
+
+/* ── 8. 弹出菜单 / 通知中心：与卡片同一套圆角和阴影 ─────────── */
+.popmenu { border-radius: 12px; padding: 7px; border-color: var(--card-line); }
+.popmenu .it { border-radius: 8px; }
+.popmenu .it:hover { background: color-mix(in srgb, var(--brand) 9%, transparent); }
+#notifyPanel { border-color: var(--card-line); }
+.np-item { border-radius: 9px; }
+.np-item:hover { background: color-mix(in srgb, var(--brand) 7%, transparent); }
+#toasts .toast { border-radius: 11px; }
+
+/* ── 9. 滚动条：更细、更淡，不抢视线 ───────────────────────── */
+#navList::-webkit-scrollbar, #panes .pane-body::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text-3) 34%, transparent); }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text-3) 55%, transparent); }
+
+/* ── 10. 窄屏抽屉适配（顶栏高度变了，抽屉起点跟着变）───────── */
+@media (max-width: 900px) {
+  #side { top: 72px; bottom: 28px; }
+  #panes .wm-pane { padding: 14px 14px 22px; }
+  html[data-nav="open"] #content::after { inset: 72px 0 28px 0; }
+}
+
+/* ── 11. 减少动效偏好 ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  #panes > .pane.on { animation: none; }
+  #navList .nav, #tabbar .tab, #panes .welcome .card-link { transition: none; }
+  #panes .welcome .card-link:hover { transform: none; }
+}
+
+/* ── 12. 启动遮罩（#boot）：与桌面版开机动画 splash.html 同一套语言 ────
+   两道启动画面连着放：exe 的 splash.html（窗口级，带完整开机动画）→
+   这里（界面首屏渲染完之前，通常只有几百毫秒）。原来这一屏是静态的深蓝卡片，
+   从动画切过来会像"又启动了一次"；补上同一套光环/呼吸/流光之后，观感是
+   同一段动画在继续。
+   只覆盖外观，DOM 与 #boot.hide 的淡出逻辑一行未改。 */
+#boot {
+  background:
+    radial-gradient(72% 56% at 50% 26%, rgba(56, 189, 248, .16), rgba(56, 189, 248, 0) 68%),
+    radial-gradient(46% 38% at 12% 92%, rgba(45, 212, 191, .10), rgba(45, 212, 191, 0) 70%),
+    linear-gradient(165deg, #0b2233 0%, #0f2b40 44%, #0a1f2e 100%);
+}
+#boot .bx { width: min(400px, 84vw); text-align: center; }
+#boot .mark {
+  position: relative; width: 68px; height: 68px; margin: 0 auto 16px; border-radius: 21px;
+  background: linear-gradient(150deg, #7dd3fc 0%, var(--brand) 42%, var(--brand-strong) 100%);
+  animation: bootMarkIn .7s cubic-bezier(.2, .85, .25, 1) both,
+             bootGlow 3.6s .7s ease-in-out infinite;
+}
+/* 呼吸只用 box-shadow 做，不额外加一层 z-index:-1 的伪元素 ——
+   transform 动画结束后会丢 stacking context，那层光晕会瞬间消失。 */
+@keyframes bootGlow {
+  0%, 100% { box-shadow: 0 18px 44px -14px rgba(56, 189, 248, .5), inset 0 1px 0 rgba(255, 255, 255, .5) }
+  50% { box-shadow: 0 18px 62px -10px rgba(56, 189, 248, .9), inset 0 1px 0 rgba(255, 255, 255, .5) }
+}
+#boot .mark::after {
+  content: ''; position: absolute; inset: -11px; border-radius: 50%;
+  border: 1px solid rgba(56, 189, 248, .18); border-top-color: rgba(56, 189, 248, .7);
+  animation: bootSpin 3.2s linear infinite;
+}
+@keyframes bootMarkIn { from { opacity: 0; transform: scale(.82) } to { opacity: 1; transform: none } }
+@keyframes bootSpin { to { transform: rotate(360deg) } }
+#boot h1 { font-size: 18px; font-weight: 500; letter-spacing: .18em; animation: bootFadeUp .7s .1s both; }
+#boot p { animation: bootFadeUp .7s .18s both; }
+#boot .steps { animation: bootFadeUp .7s .26s both; }
+#boot .progress i {
+  background: linear-gradient(90deg, var(--brand), #7ff0c8);
+  box-shadow: 0 0 12px rgba(56, 189, 248, .45);
+}
+@keyframes bootFadeUp { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) {
+  #boot .mark, #boot .mark::after, #boot h1, #boot p, #boot .steps { animation: none; }
+}
+
+/* ── 13. 模块说明条（iframe 模块专用）────────────────────────
+   去掉被嵌页面的大标题后，界面只剩"标签名 + 一堆卡片"，用户不知道这个模块
+   负责什么、从哪里开始。说明条用一句话回答"这里能做什么"，右侧收一个
+   "重新载入本页"（页面内导航卡住时的唯一出口）。
+   原生面板不挂这条 —— 它们自带 pane-head 大标题。 */
+#panes .pane > .pane-body.has-bar { display: flex; flex-direction: column; overflow: hidden; }
+#panes .pane-bar {
+  flex: 0 0 40px; display: flex; align-items: center; gap: 9px;
+  padding: 0 12px 0 14px; background: var(--canvas);
+  border-bottom: 1px solid var(--hairline); position: relative; z-index: 2;
+}
+#panes .pane-bar .ic {
+  width: 22px; height: 22px; flex: 0 0 22px; border-radius: 7px;
+  display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-ink);
+}
+#panes .pane-bar .ic svg { width: 14px; height: 14px; }
+#panes .pane-bar .tx {
+  flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#panes .pane-bar-btn {
+  width: 26px; height: 26px; flex: 0 0 26px; border-radius: 7px;
+  display: grid; place-items: center; color: var(--text-3);
+  border: 1px solid transparent; background: transparent;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+#panes .pane-bar-btn:hover { background: var(--surface); border-color: var(--line-strong); color: var(--text); }
+#panes .pane-bar-btn svg { width: 14px; height: 14px; }
+#panes .pane-body.has-bar > iframe { flex: 1 1 auto; height: auto; min-height: 0; }
+#panes .pane-body.has-bar > .frame-loading { top: 40px; }
+/* 标签内嵌告警条出现时也要让位（插在 iframe 之前） */
+#panes .pane-body.has-bar > .wm-alert { flex: 0 0 auto; }
+
+/* 标题栏里的"模块名 + 一句话说明"整块去掉：
+   模块名标签栏已经写了，说明文字现在由 iframe 模块的说明条承担 ——
+   三处说同一件事最费解。标题栏留给品牌、运行模式、工具和账号。 */
+#titlebar .crumb { display: none; }
+/* 说明条压到 36px：标题 46 + 菜单 26 + 标签 38 + 说明 36 = 146px 的 chrome，
+   再高就吃掉内容了（原来没有说明条时是 128px）。 */
+#panes .pane-bar { flex: 0 0 32px; padding: 0 8px 0 12px; gap: 8px; }
+#panes .pane-bar .ic { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 6px; }
+#panes .pane-bar .ic svg { width: 13px; height: 13px; }
+#panes .pane-body.has-bar > .frame-loading { top: 32px; }
+
+/* ── 14. 侧栏加宽 236 → 256 ─────────────────────────────────────
+   导航项现在是"名字 + 一句话说明"，236px 里说明只能露 8~10 个字，
+   加宽 20px 正好多两个字；内容区少 20px 对卡片布局没有影响。
+   折叠态（data-nav="collapsed"）必须显式写回 0，否则会被上面这条盖住。 */
+#body { grid-template-columns: 240px 1fr; }
+html[data-nav="collapsed"] #body { grid-template-columns: 0 1fr; }
+/* 窄屏必须显式写回单列：part_layout.css 的 @media 里本来是 grid-template-columns:1fr，
+   但上面的规则写在更后面、同优先级，会把那条盖掉 —— 侧栏改 fixed 抽屉之后第一列空占
+   240px，内容区被挤到右边只剩一小条（900px 窗口实测过，右侧整片空白）。 */
+@media (max-width: 900px) {
+  #body, html[data-nav="collapsed"] #body { grid-template-columns: 1fr; }
+  #side { width: 252px; }
+}
+
+/* 中等/窄窗口下统计格改成「4 列 × 2 行」：
+   auto-fit + minmax(132px) 在 900px 窗口里会排成 6+2，第二排只有两个格子、
+   还因为文字换行被撑得更高，整块参差不齐。4 列固定后 8 个格子永远两排对齐。 */
+@media (max-width: 1180px) {
+  #panes .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  #panes .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<!-- ── 启动画面（应用启动 + 服务托管进度）────────────────────────── -->
+<div id="boot">
+  <div class="bx">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3 5 13.5h6L11 21l7.5-10.5h-6z"/></svg></div>
+    <h1>AI 数字人</h1>
+    <p id="bootSub">正在启动应用…</p>
+    <div class="steps" id="bootSteps"></div>
+    <div class="progress"><i id="bootBar" style="width:6%"></i></div>
+    <div class="foot" id="bootFoot">LiveTalking 本地服务</div>
+  </div>
+</div>
+
+<!-- ── 应用主体：标题行 / 菜单行 / 左导航 + 内容区 / 状态栏 ────────── -->
+<div id="app" hidden>
+
+  <header id="titlebar">
+    <button class="app-btn icon-only" id="navToggle" title="显示/隐藏导航" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3 5 13.5h6L11 21l7.5-10.5h-6z"/></svg></span>
+      <span>AI 数字人<small id="brandVer"></small></span>
+    </div>
+    <div class="crumb"><h1 id="crumbTitle">工作台</h1><span class="sub" id="crumbSub"></span></div>
+    <span class="grow"></span>
+    <span class="tb-chip" id="modeChip" title="运行模式"><span class="dot"></span><span id="modeText">启动中</span></span>
+    <button class="app-btn" id="btnRefresh" title="重新读取服务端状态（Ctrl+R）">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.4 5.7"/><path d="M20 4v7h-7"/></svg>
+      <span class="btn-label">刷新</span>
+    </button>
+    <button class="app-btn" id="btnExternal" title="用系统浏览器打开当前模块">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v4.5A1.5 1.5 0 0 1 17.5 20h-12A1.5 1.5 0 0 1 4 18.5v-12A1.5 1.5 0 0 1 5.5 5H10"/></svg>
+      <span class="btn-label">浏览器</span>
+    </button>
+    <button class="app-btn icon-only" id="notifyBtn" title="通知中心">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15.5V11a6 6 0 1 0-12 0v4.5L4.5 18h15z"/><path d="M10 21h4"/></svg>
+      <span id="notifyDot"></span>
+    </button>
+    <button class="app-btn icon-only" id="btnSettings" title="设置（Ctrl+,）">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.2A1.7 1.7 0 0 0 4.7 8a1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1.1z"/></svg>
+    </button>
+    <button class="userchip" id="userChip" title="账号与套餐">
+      <span class="av" id="userAv">—</span>
+      <span id="userName">未登录</span>
+      <span class="pl" id="userPlan">—</span>
+    </button>
+  </header>
+
+  <nav id="menubar">
+    <button class="mi" id="menuFile">文件</button>
+    <button class="mi" id="menuView">视图</button>
+    <button class="mi" id="menuService">服务</button>
+    <button class="mi" id="menuHelp">帮助</button>
+    <span class="kb">
+      <span><kbd>Ctrl</kbd>+<kbd>R</kbd> 刷新</span>
+      <span><kbd>Ctrl</kbd>+<kbd>W</kbd> 关标签</span>
+      <span><kbd>F1</kbd> 关于</span>
+    </span>
+  </nav>
+
+  <div id="body">
+    <aside id="side">
+      <div class="side-head">
+        <div class="side-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+          <input id="navSearch" type="search" placeholder="搜索功能模块…" autocomplete="off">
+        </div>
+      </div>
+      <div id="navList"></div>
+      <div class="side-foot" id="sideFoot"></div>
+    </aside>
+
+    <section id="content">
+      <div id="tabwrap">
+        <button class="tabnav" id="tabPrev" type="button" title="向左滚动标签" aria-label="向左滚动标签">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>
+        </button>
+        <div id="tabbar" role="tablist" aria-label="已打开的模块"></div>
+        <button class="tabnav" id="tabNext" type="button" title="向右滚动标签" aria-label="向右滚动标签">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <div id="panes"></div>
+      <div id="statusbar">
+        <span class="st"><span class="dot" id="stSvcDot"></span>服务 <b id="stSvc">检测中</b></span>
+        <span class="st hide-sm">直播 <b id="stLive">—</b></span>
+        <span class="st hide-sm">输出 <b id="stOutput">—</b></span>
+        <span class="st hide-sm">当前商品 <b id="stProduct">—</b></span>
+        <span class="st hide-sm">标签 <b id="stTabs">0</b></span>
+        <span class="grow"></span>
+        <span class="st" id="stAccount">—</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ── 浮层：通知中心 / 提示条 / 弹窗 ────────────────────────────── -->
+<div id="notifyPanel" role="dialog" aria-label="通知中心">
+  <div class="np-head">通知中心<button id="npClear">清空</button></div>
+  <div id="npList"><div class="np-empty">暂无通知</div></div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<div id="modalLayer"></div>
+
+<script>
+/* ============================================================================
+   AI 数字人桌面版（app.html）—— 常规桌面软件界面 + 真实接口 + 真实页面
+   分区：0~6 常量/设置/工具/模式/接口/通知/弹窗（复用 desktop.html）
+         10 数据层   12 状态轮询   13 面板（控制中心/SOP/诊断/演示，复用）
+         14 前端日志  17 应用外壳（左导航/工具栏/多标签/设置/关于，新写）
+   ============================================================================ */
+/* ============================================================================
+   AI 数字人桌面版 —— 前端外壳（单文件）
+   分区：0 常量 / 1 设置 / 2 工具 / 3 运行模式 / 4 接口 / 5 通知 /
+        6 窗口管理器 / 7 任务栏与开始菜单 / 8 右键菜单 / 9 面板渲染 /
+        10 状态轮询 / 11 启动与快捷键
+   ========================================================================== */
+'use strict';
+/* ═══════════════════ 0. 图标 / 应用注册表（无任何外部图片与系统 Logo） ═══════════════════ */
+const ICONS = {
+  control:'<path d="M4 7h10M18 7h2M4 17h6M14 17h6"/><circle cx="16" cy="7" r="2.2"/><circle cx="12" cy="17" r="2.2"/>',
+  stage:'<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 20.5h8M12 17v3.5"/><path d="M7.5 9.5h3M7.5 12.5h6"/>',
+  console:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>',
+  sop:'<path d="M9 4h6v3H9z"/><path d="M15 5.5h3.5A1.5 1.5 0 0 1 20 7v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19V7a1.5 1.5 0 0 1 1.5-1.5H9"/><path d="m8.5 13 2 2 4-4"/>',
+  catalog:'<path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z"/><path d="M4 8.5 12 13l8-4.5M12 13v7"/>',
+  llm:'<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/>',
+  subtitle:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 14h4M13 14h4M7 10.5h10"/>',
+  users:'<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><path d="M16.5 6.2a3 3 0 0 1 0 5.6M18 14.8c1.7.7 2.9 2.2 3 4.2"/>',
+  camera:'<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="m16 11 5.5-3.2v8.4L16 13z"/>',
+  book:'<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5A1.5 1.5 0 0 0 20 18.5z"/>',
+  logs:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9.5 2.5 2.5L7 14.5M12 15h5"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.2A1.7 1.7 0 0 0 4.7 8a1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1.1z"/>',
+  info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 8.2h.01"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+  bell:'<path d="M18 15.5V11a6 6 0 1 0-12 0v4.5L4.5 18h15z"/><path d="M10 21h4"/>',
+  refresh:'<path d="M20 11a8 8 0 1 0-2.4 5.7"/><path d="M20 4v7h-7"/>',
+  image:'<rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="8.5" cy="10" r="1.7"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>',
+  grid:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  close:'<path d="M5 5l14 14M19 5 5 19"/>',
+  min:'<path d="M5 12h14"/>',
+  max:'<rect x="5" y="5" width="14" height="14" rx="1.5"/>',
+  restore:'<rect x="4" y="8" width="12" height="12" rx="1.6"/><path d="M8 8V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V15"/>',
+  external:'<path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v4.5A1.5 1.5 0 0 1 17.5 20h-12A1.5 1.5 0 0 1 4 18.5v-12A1.5 1.5 0 0 1 5.5 5H10"/>',
+  power:'<path d="M12 3v9"/><path d="M6.5 6.8a7.5 7.5 0 1 0 11 0"/>',
+  lock:'<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/>',
+  download:'<path d="M12 3.5v11M8 11l4 4 4-4M4.5 19.5h15"/>',
+  play:'<path d="M7 4.5 19 12 7 19.5z"/>',
+  pause:'<path d="M8.5 5v14M15.5 5v14"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  zap:'<path d="M12.5 3 5 13.5h6L11 21l7.5-10.5h-6z"/>',
+  alert:'<path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4.5M12 17.4h.01"/>',
+  check:'<path d="m5 13 4.5 4.5L19 7"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/>',
+  cli:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7.5 10 2.5 2.5-2.5 2.5M13 15h4"/>',
+  folder:'<path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.6l1.6 2h7.8a2 2 0 0 1 2 2v7.9a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2z"/>',
+  key:'<circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H21M18 12v3M15 12v2.2"/>',
+  cpu:'<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M10 3.5V6M14 3.5V6M10 18v2.5M14 18v2.5M3.5 10H6M3.5 14H6M18 10h2.5M18 14h2.5"/>',
+  user:'<circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"/>',
+  calendar:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3.5V6.5M16 3.5V6.5"/>',
+  pin:'<path d="M9 3.5h6l-.7 5.2 3.2 3.2H6.5l3.2-3.2z"/><path d="M12 12v8.5"/>',
+  keyboard:'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 9.5h.01M9 9.5h.01M12 9.5h.01M15 9.5h.01M18 9.5h.01M6 12.5h.01M9 12.5h.01M12 12.5h.01M15 12.5h.01M18 12.5h.01M8 15.5h8"/>',
+  monitor:'<rect x="3" y="4.5" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 17v3.5"/>'
+};
+/** 生成内联 SVG（统一线宽与圆角，风格统一） */
+function svgIcon(name, cls){
+  const d = ICONS[name] || ICONS.info;
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' + (cls ? ' class="' + cls + '"' : '') + '>' + d + '</svg>';
+}
+
+/**
+ * 应用（＝桌面图标 / 窗口）注册表。
+ *  url     ：live 模式下用 iframe 内嵌的真实页面（同源，8010 服务提供）
+ *  native  ：原生面板键名（是否 live 模式都用外壳自己渲染，直接调用真实接口）
+ *  allow   ：iframe 需要的能力（麦克风/摄像头/录屏/全屏）
+ *  plan    ：服务端页面级权限（仅用于界面提示，真正的拦截由服务端 auth 中间件执行）
+ */
+const APPS = [
+  {id:'control',  name:'控制中心',      icon:'control',  w:960, h:660, native:'control',    cat:'核心', tip:'连接数字人、文本播报、模拟评论判定、自动话术开关'},
+  {id:'stage',    name:'数字人直播画面', icon:'stage',    w:520, h:780, url:'/live_output.html', allow:'camera; microphone; autoplay; fullscreen', cat:'核心', tip:'9:16 直播输出窗口：WebRTC 数字人画面与声音'},
+  {id:'console',  name:'直播工作台',    icon:'console',  w:1180,h:760, url:'/live_console.html', cat:'核心', tip:'商品、话术、开播 SOP、录制、模拟评论的完整控制台'},
+  {id:'sop',      name:'开播 SOP 检查', icon:'sop',      w:920, h:700, native:'sop',          cat:'核心', tip:'真实预检项与人工确认项，未通过不允许开播'},
+  {id:'catalog',  name:'达人带货商品库', icon:'catalog',  w:1040,h:680, url:'/accounts.html', cat:'运营', tip:'平台商品ID、价格、卖点、佣金与素材授权'},
+  {id:'llm',      name:'大模型管理',    icon:'llm',      w:900, h:640, url:'/llm.html',       cat:'运营', tip:'DeepSeek / 通义千问 / 自定义 OpenAI 兼容模型'},
+  {id:'subtitle', name:'字幕自动回应',  icon:'subtitle', w:920, h:660, url:'/subtitle.html',  allow:'display-capture', cat:'运营', tip:'屏幕截图框选字幕区域，识别评论并自动回应'},
+  {id:'users',    name:'用户与会员管理', icon:'users',    w:1060,h:720, url:'/admin_users.html', plan:'admin.users', cat:'管理', tip:'激活码、套餐、重置密码、登录设置（仅管理员）'},
+  {id:'camera',   name:'虚拟摄像头',    icon:'camera',   w:920, h:660, url:'/virtualcam.html', plan:'avatar.manage', cat:'管理', tip:'把数字人画面输出为虚拟摄像头（仅管理员）'},
+  {id:'tutorial', name:'使用教程',      icon:'book',     w:980, h:700, url:'/affiliate_tutorial.html', cat:'帮助', tip:'完整教程与日常 SOP'},
+  {id:'logs',     name:'日志与诊断',    icon:'logs',     w:960, h:660, native:'diagnostics',  cat:'帮助', tip:'服务健康、访问地址、操作历史、前端错误'},
+  {id:'settings', name:'设置',          icon:'settings', w:880, h:640, native:'settings',     cat:'帮助', tip:'主题、壁纸、窗口行为、任务栏、图标排列'},
+  {id:'about',    name:'关于',          icon:'info',     w:740, h:580, native:'about',        cat:'帮助', tip:'版本、账号套餐、技术栈、快捷键与合规提示'}
+];
+const APP_MAP = Object.fromEntries(APPS.map(a => [a.id, a]));
+/** 默认固定在任务栏的应用 */
+const DEFAULT_PINS = ['control','stage','console','sop'];
+const WALLPAPERS = [
+  {id:'aurora', name:'晨雾浅蓝'}, {id:'mist', name:'薄云'},
+  {id:'paper',  name:'素纸'},     {id:'deepsea', name:'深海'},
+  {id:'carbon', name:'碳纤'},     {id:'none', name:'纯色'}
+];
+
+/* ═══════════════════ 1. 设置（localStorage 持久化，全部真实生效） ═══════════════════ */
+const LS_KEY = 'ailive.app.v1';   // 与桌面版分开存，互不影响
+const DEFAULTS = {
+  theme:'light',          // light | dark | auto
+  accent:'sky',           // sky(浅蓝，默认) | azure | cyan | teal | indigo
+  wallpaper:'aurora',
+  iconSize:'md',
+  taskbarPos:'bottom',    // bottom | top
+  animations:true,
+  dblClickOpen:true,      // 桌面图标双击打开（关闭后单击即打开）
+  maxOnDblTitle:true,     // 双击标题栏最大化
+  snapEdges:true,         // 拖动到屏幕边缘吸附
+  confirmClose:false,     // 关闭窗口前确认
+  alignIcons:true,        // 自动排列图标
+  snapGrid:true,          // 对齐到网格
+  showClock:true,
+  showTips:true,          // 窗口工具栏提示
+  pollMs:4000,            // 状态轮询间隔
+  toasts:true,
+  toastMs:5200,
+  autoOpen:['control'],   // 开机自动打开
+  pins:DEFAULT_PINS.slice(),
+  iconPos:{},             // 自由排列时的图标坐标
+  rects:{},               // 每个窗口上次的位置尺寸
+  recent:[]               // 最近打开
+};
+let S = loadSettings();
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? Object.assign({}, DEFAULTS, JSON.parse(raw)) : Object.assign({}, DEFAULTS);
+  }catch(e){ return Object.assign({}, DEFAULTS); }
+}
+let saveTimer = null;
+function saveSettings(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }, 260);
+}
+function applySettings(){
+  const root = document.documentElement;
+  const want = S.theme === 'auto'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : S.theme;
+  root.dataset.theme = want;
+  root.dataset.accent = S.accent;
+  root.dataset.wallpaper = S.wallpaper;
+  root.dataset.iconSize = S.iconSize;
+  root.dataset.taskbar = S.taskbarPos;
+  document.body.classList.toggle('no-anim', !S.animations);
+  const c = document.getElementById('clock'); if(c) c.style.display = S.showClock ? '' : 'none';
+  layoutIcons(); applyWindowConstraints();
+}
+
+/* ═══════════════════ 2. 工具函数 ═══════════════════ */
+const $  = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.prototype.slice.call((root || document).querySelectorAll(sel));
+/** 创建元素：el('div',{class:'x',text:'y'},child1,child2) */
+function el(tag, props, ...kids){
+  const node = document.createElement(tag);
+  if(props) for(const k in props){
+    const v = props[k];
+    if(v === null || v === undefined || v === false) continue;
+    if(k === 'class') node.className = v;
+    else if(k === 'text') node.textContent = v;
+    else if(k === 'html') node.innerHTML = v;
+    else if(k === 'style') node.setAttribute('style', v);
+    else if(k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+    else if(k === 'dataset') for(const d in v) node.dataset[d] = v[d];
+    else node.setAttribute(k, v === true ? '' : v);
+  }
+  kids.flat().forEach(ch => { if(ch === null || ch === undefined || ch === false) return;
+    node.appendChild(typeof ch === 'string' ? document.createTextNode(ch) : ch); });
+  return node;
+}
+/** HTML 转义（所有来自接口/用户的文本都必须先转义） */
+function esc(s){ return String(s === null || s === undefined ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+function fmtTime(d){ return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function fmtDate(d){ return (d.getMonth()+1) + '月' + d.getDate() + '日 周' + '日一二三四五六'[d.getDay()]; }
+function fmtDT(d){ return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+function fmtAgo(ts){
+  if(!ts) return '—';
+  const d = new Date(ts); if(isNaN(d)) return '—';
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if(diff < 60) return Math.max(1, Math.round(diff)) + ' 秒前';
+  if(diff < 3600) return Math.round(diff/60) + ' 分钟前';
+  if(diff < 86400) return Math.round(diff/3600) + ' 小时前';
+  return fmtDT(d).slice(0,5);
+}
+/** 复制到剪贴板（带降级） */
+async function copyText(text, label){
+  try{
+    if(navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+    else { const ta = el('textarea', {style:'position:fixed;opacity:0'}); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    toast('ok', '已复制', (label || '内容') + '已复制到剪贴板');
+  }catch(e){ toast('warn', '复制失败', '请手动选中复制'); }
+}
+/** 下载文本文件（导出诊断报告等） */
+function downloadText(name, text){
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = el('a', {href:URL.createObjectURL(blob), download:name}); document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+/** 给按钮加转圈加载态 */
+function busy(btn, on){ if(!btn) return; btn.classList.toggle('loading', !!on); btn.setAttribute('aria-busy', on ? 'true' : 'false'); }
+
+/* ═══════════════════ 3. 运行模式探测：live（真实服务）/ demo（离线演示） ═══════════════════ */
+const params = new URLSearchParams(location.search);
+const FORCE = params.get('demo') !== null && params.get('demo') !== '0' ? 'demo'
+            : (params.get('live') !== null && params.get('live') !== '0' ? 'live' : '');
+const canServe = location.protocol === 'http:' || location.protocol === 'https:';
+const BASE_PORT = location.port || (location.protocol === 'https:' ? '443' : '80');
+/** 运行模式：FORCE 优先；否则探测同源接口；失败即离线演示 */
+let MODE = 'demo';
+let ACCOUNT = null;   // /api/auth/me 返回的账号与套餐信息
+let PROVIDERS = [];   // /api/llm/config 里的模型供应商列表
+
+/* ═══════════════════ 4. 接口层（只调用真实存在的端点，绝不编造） ═══════════════════ */
+/** 统一请求：/api/live/* 返回 {code,msg,data}；/api/workflow/* 直接返回对象 */
+async function request(path, opt){
+  const res = await fetch(path, Object.assign({credentials:'same-origin', headers:{'Content-Type':'application/json'}}, opt || {}));
+  if(res.status === 401) { const e = new Error('请先登录'); e.code = 401; throw e; }
+  const text = await res.text();
+  let json = null; try{ json = text ? JSON.parse(text) : null; }catch(e){ json = null; }
+  if(!res.ok){
+    const e = new Error((json && (json.msg || json.error || json.detail)) || ('HTTP ' + res.status));
+    e.code = res.status; e.feature = json && json.feature; e.upgrade_url = json && json.upgrade_url;
+    throw e;
+  }
+  if(json && typeof json === 'object' && 'code' in json){
+    if(json.code !== 0){ const e = new Error(json.msg || '接口返回失败'); e.code = json.code === -1 ? 400 : json.code; e.feature = json.feature; throw e; }
+    return json.data === undefined ? json : json.data;
+  }
+  return json;
+}
+const apiGet  = p => request(p, {method:'GET'});
+const apiPost = (p, b) => request(p, {method:'POST', body: JSON.stringify(b || {})});
+const apiPut  = (p, b) => request(p, {method:'PUT', body: JSON.stringify(b || {})});
+const apiDel  = p => request(p, {method:'DELETE'});
+/** 统一错误提示：403 走“升级/权限”弹窗，401 走重新登录 */
+function apiFail(e, what){
+  const msg = e && e.message ? e.message : String(e);
+  if(e && e.code === 401){
+    modal({title:'登录状态已失效', icon:'lock', body:'<p>当前登录态已过期或被其他设备顶下线（同一账号只允许一处登录）。</p>',
+      buttons:[{text:'重新登录', primary:true, action:() => { location.href = '/login.html?next=' + encodeURIComponent('/app.html'); }}]});
+    return;
+  }
+  if(e && (e.code === 403 || e.feature)){
+    modal({title:'该功能未解锁', icon:'lock',
+      body:'<p>' + esc(msg) + '</p><p class="hint">免费版可以查看工作台与商品库、做模拟评论测试；连接数字人、开播、自动话术等属于专业版。安全操作（打断、紧急停止、安全下播）不受套餐限制。</p>',
+      buttons:[{text:'稍后', action:closeModal},
+               {text:'打开升级页', primary:true, action:() => { closeModal(); openApp('console'); openExternal('/upgrade.html'); }}]});
+    return;
+  }
+  toast('err', what ? (what + '失败') : '操作失败', msg);
+}
+/** 新标签打开链接（登录页 / 升级页 / 分享地址） */
+function openExternal(url){ window.open(url, '_blank', 'noopener'); }
+
+/* ═══════════════════ 5. 通知中心 + 弹出提示 ═══════════════════ */
+const NOTES = [];
+function toast(type, title, text, ms){
+  if(!S.toasts) return;
+  const box = $('#toasts');
+  const ic = type === 'ok' ? 'check' : type === 'warn' ? 'alert' : type === 'err' ? 'alert' : 'info';
+  const t = el('div', {class:'toast ' + (type || 'info'), role:'status'},
+    el('div', {class:'ti', html:svgIcon(ic)}),
+    el('div', {class:'tx'}, el('b', {text:title}), text ? el('p', {text:text}) : null));
+  box.appendChild(t);
+  const kill = () => { t.classList.add('out'); setTimeout(() => t.remove(), 240); };
+  t.addEventListener('click', kill);
+  setTimeout(kill, ms || S.toastMs);
+  while(box.children.length > 4) box.firstChild.remove();
+}
+/** 通知：同时进通知中心（真实状态变化才会触发，见第 10 节轮询） */
+function notify(type, title, text, silent){
+  NOTES.unshift({type:type || 'info', title:title, text:text || '', at:new Date()});
+  while(NOTES.length > 40) NOTES.pop();
+  renderNotes();
+  if(!silent) toast(type, title, text);
+}
+function renderNotes(){
+  const list = $('#npList'); if(!list) return;
+  if(!NOTES.length){ list.innerHTML = '<div class="np-empty">暂无通知</div>'; return; }
+  list.innerHTML = NOTES.map(n =>
+    '<div class="np-item ' + esc(n.type) + '"><div class="ti">' + svgIcon(n.type === 'ok' ? 'check' : n.type === 'err' ? 'alert' : 'info') + '</div>' +
+    '<div class="tx"><b>' + esc(n.title) + '</b>' + (n.text ? '<p>' + esc(n.text) + '</p>' : '') + '</div>' +
+    '<div class="tm">' + esc(fmtTime(n.at)) + '</div></div>').join('');
+  $('#notifyBtn').classList.add('has');
+}
+function openNotes(open){
+  const p = $('#notifyPanel');
+  const want = open === undefined ? !p.classList.contains('open') : open;
+  p.classList.toggle('open', want);
+  if(want){ $('#notifyBtn').classList.remove('has'); closeStart(); closeCalendar(); }
+}
+
+/* ═══════════════════ 6. 弹窗（confirm / prompt / 信息） ═══════════════════ */
+function modal(opt){
+  const layer = $('#modalLayer');
+  const foot = el('footer');
+  (opt.buttons || [{text:'知道了', primary:true, action:closeModal}]).forEach(b => {
+    foot.appendChild(el('button', {class:'btn ' + (b.primary ? 'primary' : (b.danger ? 'danger' : 'ghost')), text:b.text,
+      onclick:() => b.action ? b.action() : closeModal()}));
+  });
+  const box = el('div', {class:'modal', role:'dialog', 'aria-modal':'true'},
+    el('header', {html:svgIcon(opt.icon || 'info') + '<span>' + esc(opt.title || '提示') + '</span>'}),
+    el('div', {class:'content', html:opt.body || ''}),
+    foot);
+  layer.innerHTML = ''; layer.appendChild(box); layer.classList.add('open');
+  const first = box.querySelector('input,textarea,select,button.primary'); if(first) first.focus();
+  layer.onclick = e => { if(e.target === layer) closeModal(); };
+  return box;
+}
+function closeModal(){ const l = $('#modalLayer'); l.classList.remove('open'); l.innerHTML = ''; }
+function confirmBox(title, text, onYes, danger){
+  modal({title:title, icon: danger ? 'alert' : 'info', body:'<p>' + esc(text) + '</p>',
+    buttons:[{text:'取消', action:closeModal}, {text:'确定', primary:!danger, danger:!!danger, action:() => { closeModal(); onYes(); }}]});
+}
+function promptBox(title, label, value, onOk){
+  const box = modal({title:title, icon:'key', body:'<p>' + esc(label) + '</p><input type="text" id="pmtInput" value="' + esc(value || '') + '">',
+    buttons:[{text:'取消', action:closeModal}, {text:'确定', primary:true, action:() => {
+      const v = ($('#pmtInput') || {}).value || ''; closeModal(); onOk(v); }}]});
+  const inp = box.querySelector('#pmtInput'); if(inp){ inp.focus(); inp.select();
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ const v = inp.value; closeModal(); onOk(v); } }); }
+}
+
+
+/* ═══════════ 以下为复用片段：版本号与运行模式徽标 / 标签告警条 ═══════════ */
+const APP_VERSION = '1.4.0';   // 桌面应用版本（由装配脚本注入）
+function updateModeChip(){
+  const chip = $('#modeChip'), txt = $('#modeText');
+  if(MODE === 'live'){
+    const ok = !!(ST && (ST.__online !== false));
+    chip.className = 'tb-chip ' + (ok ? 'ok' : 'err');
+    txt.textContent = ok ? '服务在线' : '服务离线';
+    chip.title = '已连接本地 LiveTalking 服务（' + location.host + '）';
+  }else{
+    chip.className = 'tb-chip warn';
+    txt.textContent = '离线演示';
+    chip.title = '未连接本地服务：当前为离线演示模式，窗口内容为演示数据（不会调用任何接口）';
+  }
+}
+/** 任务栏固定区 */
+
+/* 复用：标签内嵌页面告警条（桌面版里贴在窗口里，这里贴在标签页里）*/
+function showFrameAlert(win, text, isErr){
+  const id = 'wmAlerts_' + win.id, old = document.getElementById(id); if(old) old.remove();
+  const bar = el('div', {class:'wm-alert' + (isErr ? ' no' : ''), id:id, html:svgIcon('alert') + '<span>' + esc(text) + '</span>'});
+  win.body.insertBefore(bar, win.body.firstChild);
+}
+
+/* ═══════════ 数据层与状态轮询（复用）═══════════ */
+/* ═══════════════════ 11. 数据层：live 走真实接口，demo 走本地演示数据 ═══════════════════ */
+const Data = {
+  async status(){
+    if(MODE === 'demo') return DEMO.status();
+    const d = await apiGet('/api/live/status');
+    if(d && typeof d === 'object') d.__online = true;
+    return d;
+  },
+  async preflight(){
+    if(MODE === 'demo') return DEMO.status().workflow;
+    return apiGet('/api/workflow/preflight');
+  },
+  async simulate(text, speak){
+    if(MODE === 'demo') return DEMO.simulate(text, speak);
+    return apiPost('/api/live/simulate', {text:text, speak:!!speak});
+  },
+  async speak(text, mode, interrupt){
+    if(MODE === 'demo') return DEMO.speak(text, mode, interrupt);
+    return apiPost('/api/live/speak', {text:text, mode:mode || 'echo', interrupt:!!interrupt});
+  },
+  async interrupt(){
+    if(MODE === 'demo') return DEMO.interrupt();
+    return apiPost('/api/live/interrupt', {});
+  },
+  async emergencyStop(){
+    if(MODE === 'demo') return DEMO.emergencyStop();
+    return apiPost('/api/live/emergency-stop', {});
+  },
+  async autopilot(on){
+    if(MODE === 'demo') return DEMO.autopilot(on);
+    return apiPost('/api/live/autopilot', {enabled:!!on});
+  },
+  async recording(action){
+    if(MODE === 'demo') return DEMO.recording(action);
+    return apiPost('/api/live/recording', {action:action});
+  },
+  async workflowStart(){
+    if(MODE === 'demo') return DEMO.workflowStart();
+    return apiPost('/api/workflow/start', {play_mode:'loop'});
+  },
+  async workflowStop(){
+    if(MODE === 'demo') return DEMO.workflowStop();
+    return apiPost('/api/workflow/stop', {});
+  },
+  async health(){
+    if(MODE === 'demo') return DEMO.health();
+    return apiGet('/health');
+  },
+  async access(){
+    if(MODE === 'demo') return {desktop_url:location.href, lan_urls:[], port:location.port || 0, same_network_only:true, demo:true};
+    return apiGet('/api/system/access');
+  },
+  async account(){
+    if(MODE === 'demo') return ACCOUNT;
+    return apiGet('/api/auth/me');
+  }
+};
+/** 离线演示数据层：只在本机生成，全部标注“演示”，不冒充真实接口结果 */
+const DEMO = (() => {
+  const scripts = [
+    '欢迎来到直播间，我是 AI 数字人主播，全程有真人值守，有问题随时打在公屏上。',
+    '今天这款商品到手价 199 元，前 50 名下单再减 30 元，优惠券在左下角领取。',
+    '面料是 95% 棉 + 5% 氨纶，S 到 2XL 都有货，身高体重报给我，我帮你选码。',
+    '发货是 48 小时内，支持 7 天无理由退换，运费险已经给大家买好了。'
+  ];
+  const intents = [
+    {id:'price', label:'价格咨询', words:['多少钱','价格','贵','优惠','券','减'], reply:'这款今天的到手价是 199 元，前 50 名下单再减 30 元，优惠券在左下角领取哦～'},
+    {id:'spec',  label:'规格咨询', words:['尺码','码','尺寸','多大','规格','面料'], reply:'尺码从 S 到 2XL 都有，面料是 95% 棉加 5% 氨纶，把身高体重发我，我帮你选码。'},
+    {id:'ship',  label:'发货物流', words:['发货','物流','快递','几天','什么时候到'], reply:'下单后 48 小时内发出，江浙沪一般第二天到，偏远地区 3 到 5 天。'},
+    {id:'after', label:'售后保障', words:['退货','退款','换货','售后','保修'], reply:'支持 7 天无理由退换，运费险已经给大家买好，售后问题直接在公屏说，值守同事马上处理。'}
+  ];
+  const st = {
+    connected:false, speaking:false, autopilot:false, recording:false, state:'idle',
+    scripts:scripts.slice(), idx:0, last:'', reply:'', started:null, history:[],
+    stats:{product_switches:0, scripts_played:0, manual_interventions:0},
+    timers:[]
+  };
+  function log(type, text, status){ st.history.unshift({time: Date.now()/1000, type:type, text:text, status:status || 'ok'}); if(st.history.length > 40) st.history.pop(); }
+  log('system', '离线演示版已启动（未连接本地服务，所有数据为演示数据）');
+  function checks(){
+    return [
+      {key:'current_product', label:'已选择当前讲解商品', passed:true,  level:'blocker', action:''},
+      {key:'scripts',         label:'当前商品话术已生成并复核', passed:true, level:'blocker', action:''},
+      {key:'output',          label:'数字人输出窗口已连接', passed:st.connected, level:'blocker', action:'打开 9:16 输出窗口并点击「启动直播画面」'},
+      {key:'ai_label',        label:'直播画面包含 AI 标识', passed:true, level:'blocker', action:''},
+      {key:'permissions_confirmed', label:'达人带货和开播权限已确认', passed:false, level:'blocker', action:'在平台后台确认直播、带货和类目权限'},
+      {key:'product_card_matched',  label:'工作台商品与平台商品卡一致', passed:false, level:'blocker', action:'逐项核对商品ID、价格、优惠和卖点'},
+      {key:'platform_product_attached', label:'当前商品已挂到直播间', passed:false, level:'blocker', action:'在官方直播工具挂载同一商品'},
+      {key:'audio_video_checked', label:'画面、声音和口型已检查', passed:st.connected, level:'blocker', action:'人工播报一段测试话术并观察音频电平'},
+      {key:'private_rehearsal_done', label:'已完成私密/本地彩排', passed:false, level:'blocker', action:'至少彩排 1 分钟'},
+      {key:'human_supervisor_ready', label:'真人值守和紧急接管已就绪', passed:true, level:'blocker', action:''},
+      {key:'supervision_visible', label:'值守痕迹可观测：真人实时读评论并回应', passed:false, level:'blocker', action:'开播中由值守人员实时读评论'},
+      {key:'category_qualified', label:'百货类目资质已核对', passed:false, level:'blocker', action:'逐项核对子类目资质'},
+      {key:'anti_replay', label:'防录播：顺序已打乱，循环间隔 30 秒', passed:true, level:'warning', action:''},
+      {key:'llm', label:'大模型已配置，可进行智能答疑', passed:false, level:'warning', action:'在大模型管理中配置并测试 Key'},
+      {key:'platform_product_id', label:'当前商品已填写平台商品 ID', passed:true, level:'warning', action:''},
+      {key:'ocr', label:'字幕 OCR 已启动', passed:false, level:'optional', action:'需要自动识别评论时再框选并启动'},
+      {key:'tts_cache', label:'离线语音缓存已覆盖高频话术', passed:true, level:'optional', action:''}
+    ];
+  }
+  function workflow(){
+    const list = checks();
+    const blockers = list.filter(c => c.level === 'blocker' && !c.passed);
+    const warnings = list.filter(c => c.level === 'warning' && !c.passed);
+    const reqTotal = list.filter(c => c.level === 'blocker').length;
+    const reqPassed = list.filter(c => c.level === 'blocker' && c.passed).length;
+    return {ready:!blockers.length, score:Math.round(reqPassed*100/reqTotal), required_passed:reqPassed, required_total:reqTotal,
+      blockers:blockers, warnings:warnings, checks:list, manual_checks:{}};
+  }
+  function say(text, seconds){
+    st.speaking = true; st.last = text;
+    const t = setTimeout(() => { st.speaking = false; st.stats.scripts_played += 1; }, (seconds || 3) * 1000);
+    st.timers.push(t);
+  }
+  return {
+    get connected(){ return st.connected; },
+    status(){
+      const current = {id:'demo-1', name:'纯棉宽松短袖T恤（演示商品）', price:199, coupon:'满199减30', platform_product_id:'DEMO-10086',
+        selling_points:'95% 棉、不易变形、运费险已买', enabled:true, verified:true, material_authorized:true, category:'服饰'};
+      return {
+        __online:false, __demo:true,
+        sessionid: st.connected ? 'demo-session' : '', output_connected:st.connected, output_registered_at: st.connected ? st.started : null,
+        speaking:st.speaking, recording:st.recording, autopilot:st.autopilot, thinking:false,
+        settings:{platform:'视频号', title:'AI 数字人直播间（演示）', ai_label:'AI 数字人 · 内容由人工值守', layout:'9:16',
+          script_gap_seconds:30, repeat_scripts:true, shuffle_scripts:true},
+        scripts:st.scripts, script_index:st.idx, play_order:[0,1,2,3], gap_target_seconds:30,
+        last_spoken_text:st.last, last_reply:st.reply, history:st.history.slice(0, 24),
+        live_state:st.state, live_started_at:st.started,
+        stats:st.stats, play_queue:null, atmosphere:{enabled:false, interval_seconds:180},
+        subtitle:{running:false, region:null}, llm:{provider:'deepseek', model:'deepseek-chat', label:'DeepSeek', api_key_configured:false},
+        sales:{products:[current], current_product_id:current.id, current_product:current, ready_count:1,
+          compliance:{ok:true}, categories:[], script_types:[], commission:{total:0}},
+        workflow:workflow()
+      };
+    },
+    simulate(text, speak){
+      const t0 = performance.now();
+      let hit = null;
+      for(const it of intents){ for(const w of it.words){ if(text.indexOf(w) >= 0){ hit = {it:it, word:w}; break; } } if(hit) break; }
+      const route = hit ? 'intent' : 'llm';
+      const response = hit ? hit.it.reply : '';
+      const elapsed = Math.round((performance.now() - t0) * 100) / 100;
+      const note = hit ? '' : '演示模式未配置大模型：这里在正式版会走 T2 大模型回答，需要先在大模型管理页配置 API Key';
+      log('simulate', (hit ? 'T1 意图直答' : 'T2 大模型回答') + '｜' + text + ' → ' + (response || '未生成应答'), response ? 'ok' : 'error');
+      if(response && speak){ say(response); st.reply = response; }
+      return {input:text, lines:[text], route:route, route_label: hit ? 'T1 意图直答' : 'T2 大模型回答',
+        intent: hit ? hit.it.id : '', intent_label: hit ? hit.it.label : '', keyword: hit ? hit.word : '', question:text,
+        response:response, offline_ready:!!hit, spoken:!!(response && speak), output_connected:st.connected,
+        product:'纯棉宽松短袖T恤（演示商品）', note:note, elapsed_ms:elapsed};
+    },
+    speak(text, mode, interrupt){
+      if(!text || !text.trim()) throw new Error('请输入要播报的文本');
+      if(interrupt){ st.speaking = false; }
+      say(text.trim(), 3);
+      log('manual', '人工播报：' + text.trim().slice(0, 80));
+      return {spoken:true, text:text.trim(), mode:mode || 'echo'};
+    },
+    interrupt(){ st.speaking = false; st.stats.manual_interventions += 1; log('manual', '已打断当前播报'); return {interrupted:true}; },
+    emergencyStop(){ st.autopilot = false; st.speaking = false; st.stats.manual_interventions += 1; log('manual', '紧急停止已执行（自动话术已关闭并打断播报）'); return {stopped:true}; },
+    autopilot(on){ st.autopilot = !!on; log('autopilot', on ? '自动话术已启动' : '自动话术已暂停'); return {autopilot:st.autopilot}; },
+    recording(action){ st.recording = action === 'start'; log('record', st.recording ? '已开始录制' : '录制已停止并保存'); return {recording:st.recording}; },
+    workflowStart(){ st.state = 'live'; st.started = Date.now()/1000; log('workflow', '一键开播（演示）已启动'); return {success:true}; },
+    workflowStop(){ st.state = 'ended'; st.autopilot = false; log('workflow', '已安全下播（演示）'); return {success:true}; },
+    connect(on){ st.connected = !!on; if(on){ st.started = Date.now()/1000; log('output', '数字人输出窗口已连接（演示）'); } else { log('output', '数字人输出已断开（演示）'); } },
+    health(){ return {status:'ok', mode:'demo', note:'离线演示模式：未连接本地服务，以下为静态示例结构'}; },
+    log:log
+  };
+})();
+
+/* ═══════════════════ 12. 状态轮询与变化通知 ═══════════════════ */
+let ST = null;
+let POLL = null, pollMs = 0;
+const PREV = {};
+/** 探测真实状态变化并推送桌面通知（只在 live 模式做） */
+function detectChanges(s){
+  if(!s) return;
+  const watch = [
+    ['output_connected', v => notify(v ? 'ok' : 'warn', v ? '数字人已连接' : '数字人已断开',
+      v ? '输出窗口已完成 WebRTC 连接，可以开始播报。' : '直播输出窗口已关闭或断开，请在“数字人直播画面”窗口重新连接。')],
+    ['recording', v => notify(v ? 'ok' : 'info', v ? '已开始录制' : '录制已停止', v ? '直播画面正在录制并保存。' : '录制文件已保存到服务器的 record 目录。')],
+    ['autopilot', v => notify(v ? 'ok' : 'info', v ? '自动话术已启动' : '自动话术已暂停', v ? '数字人会按话术队列自动讲解并随机化间隔。' : '自动播报已停止，安全操作不受套餐限制。')],
+    ['live_state', v => { const names = {idle:'待机', preparing:'准备中', ready:'就绪', rehearsal:'彩排中', live:'直播中', stopping:'停播中', ended:'已结束'};
+      notify(v === 'live' ? 'ok' : (v === 'ended' ? 'info' : 'info'), '直播状态：' + (names[v] || v), '状态机已从「' + (names[PREV.live_state] || PREV.live_state || '未知') + '」切换。'); }]
+  ];
+  watch.forEach(([key, fn]) => {
+    const cur = s[key];
+    if(PREV[key] !== undefined && PREV[key] !== cur){ try{ fn(cur); }catch(e){} }
+    PREV[key] = cur;
+  });
+}
+/** 拉取一次状态，并推送给所有已打开的原生面板 */
+async function refreshStatus(manual){
+  try{
+    ST = await Data.status();
+    if(MODE === 'live' && !manual) detectChanges(ST);
+    WM.wins.forEach(w => { if(w.onStatus){ try{ w.onStatus(ST); }catch(e){ console.warn('面板刷新失败', e); } } });
+    updateModeChip();
+    if(manual) toast('ok', '状态已刷新', '已重新读取服务端运行状态');
+    return ST;
+  }catch(e){
+    if(manual) apiFail(e, '刷新状态');
+    if(MODE === 'live'){ $('#modeChip').className = 'tb-chip err'; $('#modeText').textContent = '服务离线'; }
+    throw e;
+  }
+}
+function startPolling(){
+  if(POLL) clearInterval(POLL);
+  pollMs = Math.max(2000, Number(S.pollMs) || 4000);
+  POLL = setInterval(() => { if(!document.hidden) refreshStatus(false).catch(() => {}); }, pollMs);
+}
+
+
+/* ═══════════ 原生面板：控制中心 / SOP / 日志与诊断（复用，全部真实接口）═══════════ */
+/* ═══════════════════ 13. 原生面板渲染器 ═══════════════════ */
+const PanelRegistry = {};
+
+/* ── 13.1 控制中心：连接数字人 / 文本播报 / 模拟评论 / 自动话术（全部真实接口） ── */
+PanelRegistry.control = function(pane, win){
+  const stateName = v => ({idle:'待机', preparing:'准备中', ready:'就绪', rehearsal:'彩排中', live:'直播中', stopping:'停播中', ended:'已结束'}[v] || v || '—');
+  pane.innerHTML =
+    (MODE === 'demo'
+      ? '<div class="banner warn">' + svgIcon('alert') + '<span><b>离线演示模式</b>：未连接本地服务，页面中的数字为演示数据；按钮操作只在本页生效，不会调用任何接口。</span></div>'
+      : '') +
+    '<div class="pane-head"><h2>控制中心</h2><span class="badge info" id="ctLiveState">—</span>' +
+      '<div class="sp"><button class="btn ghost" id="ctRefresh">' + svgIcon('refresh') + '<span>刷新状态</span></button>' +
+      '<button class="btn primary" id="ctOpenStage">' + svgIcon('stage') + '<span>打开并连接直播画面</span></button></div></div>' +
+
+    '<div class="stats" id="ctStats"></div>' +
+
+    '<div class="card" style="margin-top:12px"><h3>' + svgIcon('zap') + '快捷操作<span class="hint" style="margin-left:auto">安全操作不受套餐限制</span></h3>' +
+      '<div class="row">' +
+        '<button class="btn" id="ctSpeakTest">' + svgIcon('play') + '<span>播报一段测试话术</span></button>' +
+        '<button class="btn warn" id="ctInterrupt">' + svgIcon('pause') + '<span>打断播报</span></button>' +
+        '<button class="btn" id="ctAuto">' + svgIcon('zap') + '<span>启动自动话术</span></button>' +
+        '<button class="btn" id="ctAutoStop">' + svgIcon('stop') + '<span>暂停自动话术</span></button>' +
+        '<button class="btn" id="ctRec">' + svgIcon('monitor') + '<span>开始录制</span></button>' +
+        '<button class="btn danger" id="ctEmergency">' + svgIcon('alert') + '<span>紧急停止</span></button>' +
+      '</div></div>' +
+
+    '<div class="grid2" style="margin-top:12px">' +
+      '<div class="card"><h3>' + svgIcon('control') + '文本驱动播报</h3>' +
+        '<div class="field"><span>要播报的文本（支持多句，按行分隔）</span>' +
+          '<textarea id="ctText" placeholder="例如：欢迎来到直播间，我是 AI 数字人主播。"></textarea></div>' +
+        '<div class="row"><select id="ctMode" title="播报模式"><option value="echo">复读（原声朗读）</option><option value="chat">对话（走大模型）</option></select>' +
+          '<label class="chk"><input type="checkbox" id="ctBreak"> 打断当前播报</label>' +
+          '<button class="btn primary" id="ctSend" style="margin-left:auto">' + svgIcon('play') + '<span>提交播报</span></button></div>' +
+        '<div class="hint" style="margin-top:8px" id="ctSpeakMsg">播报需要数字人输出窗口已连接；未连接时接口会返回错误提示。</div></div>' +
+
+      '<div class="card"><h3>' + svgIcon('subtitle') + '模拟评论判定</h3>' +
+        '<div class="field"><span>输入一句观众评论（开播前自检 / 演示 / 排障）</span>' +
+          '<input type="text" id="ctSimText" placeholder="例如：这个多少钱？发什么快递？"></div>' +
+        '<div class="row"><button class="btn sm ghost" data-quick="这个多少钱？有优惠券吗">价格</button>' +
+          '<button class="btn sm ghost" data-quick="都有什么尺码？什么面料">规格</button>' +
+          '<button class="btn sm ghost" data-quick="什么时候发货？多久能到">发货</button>' +
+          '<button class="btn sm ghost" data-quick="支持退货吗？有运费险吗">售后</button>' +
+          '<button class="btn sm ghost" data-quick="今天天气怎么样">未命中示例</button></div>' +
+        '<div class="row" style="margin-top:9px"><label class="chk"><input type="checkbox" id="ctSimSpeak"> 同时让数字人播报</label>' +
+          '<button class="btn primary" id="ctSimRun" style="margin-left:auto">' + svgIcon('check') + '<span>模拟一条评论</span></button></div>' +
+        '<div id="ctSimOut" style="margin-top:10px"></div></div>' +
+    '</div>' +
+
+    '<div class="grid2" style="margin-top:12px">' +
+      '<div class="card"><h3>' + svgIcon('clock') + '最近播报与应答</h3><dl class="kv" id="ctLast"></dl></div>' +
+      '<div class="card"><h3>' + svgIcon('cli') + '最近操作历史<span class="hint" style="margin-left:auto">来自服务端 status.history</span></h3>' +
+        '<div class="log" id="ctHistory">加载中…</div></div>' +
+    '</div>';
+
+  const refs = {
+    stats:$('#ctStats', pane), liveState:$('#ctLiveState', pane), last:$('#ctLast', pane), history:$('#ctHistory', pane),
+    simOut:$('#ctSimOut', pane), speakMsg:$('#ctSpeakMsg', pane), text:$('#ctText', pane),
+    autoBtn:$('#ctAuto', pane), rec:$('#ctRec', pane), simSpeak:$('#ctSimSpeak', pane)
+  };
+  /* 渲染（由全局轮询推送状态，避免每个窗口各自轮询） */
+  function render(s){
+    if(!s || !pane.isConnected) return;
+    refs.liveState.textContent = '直播状态：' + stateName(s.live_state);
+    refs.liveState.className = 'badge ' + (s.live_state === 'live' ? 'ok' : s.live_state === 'ended' ? '' : 'info');
+    const cur = (s.sales && s.sales.current_product) || null;
+    const wf = s.workflow || {};
+    refs.stats.innerHTML = [
+      ['数字人输出', s.output_connected ? '已连接' : '未连接', s.output_connected],
+      ['播报中', s.speaking ? '正在播报' : '静默', s.speaking],
+      ['自动话术', s.autopilot ? '运行中' : '已暂停', s.autopilot],
+      ['录制', s.recording ? '录制中' : '未录制', s.recording],
+      ['当前商品', cur ? cur.name : '未选择', !!cur],
+      ['开播检查', (wf.required_passed || 0) + '/' + (wf.required_total || 0) + ' 项必做通过', !!wf.ready],
+      ['大模型', (s.llm && s.llm.label ? s.llm.label : '未配置') + (s.llm && s.llm.api_key_configured ? ' · Key 已配置' : ' · Key 未配置'), !!(s.llm && s.llm.api_key_configured)],
+      ['累计播报', (s.stats ? s.stats.scripts_played : 0) + ' 段 · 人工介入 ' + (s.stats ? s.stats.manual_interventions : 0) + ' 次', true]
+    ].map(([lab, val, ok]) => '<div class="stat"><div class="lab">' + esc(lab) + '</div><div class="val sm">' +
+      (ok ? '<span class="badge ok" style="margin-right:6px">●</span>' : '<span class="badge" style="margin-right:6px">○</span>') + esc(val) + '</div></div>').join('');
+    refs.last.innerHTML = [
+      ['最后播报', s.last_spoken_text || '—'], ['最后应答', s.last_reply || '—'],
+      ['话术条数', (s.scripts || []).length + ' 条'], ['循环间隔', (s.gap_target_seconds || 0) + ' 秒'],
+      ['直播开始', s.live_started_at ? new Date(s.live_started_at * 1000).toLocaleString('zh-CN') : '—'],
+      ['连接时间', s.output_registered_at ? new Date(s.output_registered_at * 1000).toLocaleString('zh-CN') : '—']
+    ].map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>').join('');
+    const his = s.history || [];
+    refs.history.innerHTML = his.length
+      ? his.slice(0, 12).map(h => '<span class="' + (h.status === 'error' ? 'er' : '') + '">' + esc(fmtDT(new Date((h.time || 0) * 1000))) + ' [' + esc(h.type || '') + '] ' + esc(h.text || '') + '</span>').join('\n')
+      : '暂无操作记录。';
+    refs.autoBtn.querySelector('span').textContent = s.autopilot ? '自动话术运行中' : '启动自动话术';
+    refs.rec.querySelector('span').textContent = s.recording ? '停止录制' : '开始录制';
+    refs.speakMsg.textContent = s.output_connected
+      ? '输出窗口已连接，提交后会推送给数字人播报。'
+      : '数字人输出窗口未连接：请先点右上角「打开并连接直播画面」，在画面窗口里点「启动直播画面」。';
+  }
+  win.onStatus = render;
+  if(ST) render(ST);
+
+  /* —— 交互：每个按钮都调用真实接口（demo 模式走本地演示数据层） —— */
+  const acts = {
+    ctRefresh:async b => { busy(b, true); try{ await refreshStatus(true); }catch(e){} finally{ busy(b, false); } },
+    ctOpenStage:() => { openApp('stage'); setTimeout(() => toast('info', '请在画面窗口点击「启动直播画面」', '该按钮会建立 WebRTC 连接并把输出窗口登记到工作台。'), 600); },
+    ctSpeakTest:async b => { busy(b, true); try{ await Data.speak('这是一段测试话术：画面、声音和口型检查正常，请值守人员确认后再正式开播。', 'echo', false);
+      toast('ok', '测试话术已提交', '请观察直播画面是否开始播报'); await refreshStatus(false); }catch(e){ apiFail(e, '播报'); } finally{ busy(b, false); } },
+    ctInterrupt:async b => { busy(b, true); try{ await Data.interrupt(); toast('ok', '已打断播报', '安全操作不受套餐限制'); await refreshStatus(false); }catch(e){ apiFail(e, '打断'); } finally{ busy(b, false); } },
+    ctAuto:async b => { busy(b, true); try{ const on = !(ST && ST.autopilot); await Data.autopilot(on); toast('ok', on ? '自动话术已启动' : '自动话术已暂停', on ? '注意保持真人值守并可随时接管' : ''); await refreshStatus(false); }catch(e){ apiFail(e, '自动话术'); } finally{ busy(b, false); } },
+    ctAutoStop:async b => { busy(b, true); try{ await Data.autopilot(false); toast('ok', '自动话术已暂停', ''); await refreshStatus(false); }catch(e){ apiFail(e, '自动话术'); } finally{ busy(b, false); } },
+    ctRec:async b => { busy(b, true); try{ const stop = !!(ST && ST.recording); await Data.recording(stop ? 'stop' : 'start');
+      toast('ok', stop ? '录制已停止' : '已开始录制', stop ? '录制文件已保存' : '录制中请确认磁盘空间充足'); await refreshStatus(false); }catch(e){ apiFail(e, '录制'); } finally{ busy(b, false); } },
+    ctEmergency:async b => { confirmBox('紧急停止', '将立即停止自动话术、字幕回应并打断当前播报。确定执行吗？', async () => {
+      busy(b, true); try{ await Data.emergencyStop(); notify('warn', '已执行紧急停止', '自动话术与字幕回应已关闭，当前播报已打断。'); await refreshStatus(false); }
+      catch(e){ apiFail(e, '紧急停止'); } finally{ busy(b, false); } }, true); },
+    ctSend:async b => {
+      const text = refs.text.value.trim(); if(!text){ toast('warn', '请输入文本', '文本为空时不会提交'); return; }
+      busy(b, true);
+      try{ await Data.speak(text, $('#ctMode', pane).value, $('#ctBreak', pane).checked);
+        toast('ok', '已提交播报', '共 ' + text.split(/\r?\n/).filter(Boolean).length + ' 句'); refs.text.value = ''; await refreshStatus(false);
+      }catch(e){ apiFail(e, '播报'); } finally{ busy(b, false); }
+    },
+    ctSimRun:async b => {
+      const text = $('#ctSimText', pane).value.trim(); if(!text){ toast('warn', '请输入一句评论', '例如：这个多少钱？'); return; }
+      busy(b, true); refs.simOut.innerHTML = '<div class="hint">判定中…</div>';
+      try{
+        const r = await Data.simulate(text, refs.simSpeak.checked);
+        refs.simOut.innerHTML =
+          '<div class="card" style="box-shadow:none;background:var(--surface-2)">' +
+          '<div class="row" style="margin-bottom:8px"><span class="badge info">' + esc(r.route_label || '未判定') + '</span>' +
+          (r.intent_label ? '<span class="badge">意图：' + esc(r.intent_label) + '</span>' : '') +
+          (r.keyword ? '<span class="badge">命中词：' + esc(r.keyword) + '</span>' : '') +
+          '<span class="badge ' + (r.offline_ready ? 'ok' : 'warn') + '">' + (r.offline_ready ? '断网可播' : '需联网/大模型') + '</span>' +
+          '<span class="badge">' + esc(r.elapsed_ms) + ' ms</span>' +
+          '<span class="badge ' + (r.spoken ? 'ok' : '') + '">' + (r.spoken ? '已播报' : '仅判定未播报') + '</span></div>' +
+          '<dl class="kv"><dt>输入</dt><dd>' + esc(r.input) + '</dd>' +
+          '<dt>将播报</dt><dd>' + esc(r.response || '（无应答文本）') + '</dd>' +
+          (r.product ? '<dt>当前商品</dt><dd>' + esc(r.product) + '</dd>' : '') +
+          (r.note ? '<dt>说明</dt><dd>' + esc(r.note) + '</dd>' : '') + '</dl></div>';
+        await refreshStatus(false);
+      }catch(e){ refs.simOut.innerHTML = '<div class="banner warn">' + svgIcon('alert') + '<span>判定失败：' + esc(e.message) + '</span></div>'; }
+      finally{ busy(b, false); }
+    }
+  };
+  Object.keys(acts).forEach(id => { const b = document.getElementById(id); if(b) b.addEventListener('click', () => acts[id](b)); });
+  $$('[data-quick]', pane).forEach(b => b.addEventListener('click', () => { $('#ctSimText', pane).value = b.dataset.quick; }));
+  return {refresh:() => refreshStatus(true), onStatus:render};
+};
+
+/* ── 13.2 开播 SOP 检查：真实预检项 + 一键开播/安全下播 ── */
+PanelRegistry.sop = function(pane, win){
+  pane.innerHTML =
+    '<div class="pane-head"><h2>开播 SOP 检查中心</h2><div class="sp">' +
+      '<button class="btn ghost" id="sopReload">' + svgIcon('refresh') + '<span>重新预检</span></button>' +
+      '<button class="btn primary" id="sopStart">' + svgIcon('play') + '<span>一键开播</span></button>' +
+      '<button class="btn danger" id="sopStop">' + svgIcon('stop') + '<span>安全下播</span></button></div></div>' +
+    '<div id="sopBody"><div class="empty">正在读取检查项…</div></div>';
+  const body = $('#sopBody', pane);
+  function render(s){
+    if(!s || !pane.isConnected) return;
+    const wf = s.workflow || {checks:[], blockers:[], warnings:[]};
+    const cur = (s.sales && s.sales.current_product) || null;
+    const group = (level, title, cls) => {
+      const list = (wf.checks || []).filter(c => (c.level || 'blocker') === level);
+      if(!list.length) return '';
+      return '<div class="card"><h3>' + svgIcon(level === 'blocker' ? 'alert' : level === 'warning' ? 'zap' : 'info') + esc(title) +
+        '<span class="badge ' + cls + '" style="margin-left:auto">' + list.filter(c => c.passed).length + '/' + list.length + '</span></h3>' +
+        '<ul class="chk-list">' + list.map(c =>
+          '<li class="' + (c.passed ? 'pass' : (c.level === 'blocker' ? 'block' : 'warn')) + '">' +
+          '<span class="m">' + (c.passed ? '✓' : '!') + '</span><span class="t"><b>' + esc(c.label) + '</b>' +
+          (c.passed ? '' : '<span>' + esc(c.action || '') + '</span>') + '</span></li>').join('') + '</ul></div>';
+    };
+    body.innerHTML =
+      '<div class="stats">' +
+        '<div class="stat"><div class="lab">必做项通过率</div><div class="val">' + (wf.score === undefined ? '—' : wf.score + '%') + '</div></div>' +
+        '<div class="stat"><div class="lab">必做项</div><div class="val">' + (wf.required_passed || 0) + ' / ' + (wf.required_total || 0) + '</div></div>' +
+        '<div class="stat"><div class="lab">阻塞项</div><div class="val">' + ((wf.blockers || []).length) + '</div></div>' +
+        '<div class="stat"><div class="lab">建议项待办</div><div class="val">' + ((wf.warnings || []).length) + '</div></div>' +
+        '<div class="stat"><div class="lab">能否开播</div><div class="val sm">' + (wf.ready ? '<span class="badge ok">可以开播</span>' : '<span class="badge err">存在阻塞</span>') + '</div></div>' +
+      '</div>' +
+      '<div class="progress" style="margin:12px 0"><i style="width:' + (wf.score || 0) + '%"></i></div>' +
+      '<div class="card"><h3>' + svgIcon('catalog') + '当前讲解商品</h3><dl class="kv">' +
+        (cur ? '<dt>商品</dt><dd>' + esc(cur.name) + '</dd><dt>平台商品ID</dt><dd>' + esc(cur.platform_product_id || '未填写') + '</dd>' +
+               '<dt>已核对价格</dt><dd>' + esc(cur.price || '未填写') + '</dd><dt>卖点</dt><dd>' + esc(cur.selling_points || '未填写') + '</dd>'
+             : '<dt>状态</dt><dd>未选择当前商品（在商品库中设为当前商品）</dd>') + '</dl></div>' +
+      group('blocker', '必做检查项（未通过不可开播）', 'err') +
+      group('warning', '建议检查项（不阻塞开播）', 'warn') +
+      group('optional', '可选检查项', '') +
+      '<div class="card"><h3>' + svgIcon('info') + '开播前后的纪律</h3><div class="hint">' +
+        '① 平台挂载商品必须与工作台“当前商品”一致；佣金字段不会口播。<br>' +
+        '② 保留 LiveTalking 水印并按平台要求标明 AI 生成，全程真人值守、可随时接管。<br>' +
+        '③ 防录播看的是“固定周期重复”：间隔 ≥15 秒并打乱顺序，最稳是关闭循环、逐轮人工继续。<br>' +
+        '④ 修改商品、价格、话术后，相关检查项会自动撤销，必须重新核对。' +
+      '</div></div>';
+  }
+  win.onStatus = render; if(ST) render(ST);
+  const on = (id, fn) => { const b = document.getElementById(id); if(b) b.addEventListener('click', () => fn(b)); };
+  on('sopReload', async b => { busy(b, true); try{ await refreshStatus(false); toast('ok', '已重新预检', '检查项已按最新配置重新计算'); }catch(e){ apiFail(e, '预检'); } finally{ busy(b, false); } });
+  on('sopStart', async b => {
+    busy(b, true);
+    try{
+      const r = await Data.workflowStart();
+      if(r && r.success === false) toast('warn', '开播未完成', r.error || '请检查工作台状态');
+      else notify('ok', '一键开播已启动', '自动内容与场次记录已启动；请确认平台侧已开始直播。');
+      await refreshStatus(false);
+    }catch(e){ apiFail(e, '一键开播'); } finally{ busy(b, false); }
+  });
+  on('sopStop', b => confirmBox('安全下播', '将停止自动内容并结束当前场次，确定吗？', async () => {
+    busy(b, true); try{ const r = await Data.workflowStop();
+      toast(r && r.success === false ? 'warn' : 'ok', '已安全下播', r && r.error ? r.error : '自动模块已关闭');
+      await refreshStatus(false); }catch(e){ apiFail(e, '安全下播'); } finally{ busy(b, false); } }));
+  return {refresh:() => refreshStatus(false), onStatus:render};
+};
+
+/* ── 13.3 日志与诊断：/health + /api/system/access + 操作历史 + 前端错误 ── */
+PanelRegistry.diagnostics = function(pane, win){
+  pane.innerHTML =
+    '<div class="pane-head"><h2>日志与诊断</h2><div class="sp">' +
+      '<button class="btn ghost" id="dgReload">' + svgIcon('refresh') + '<span>重新检测</span></button>' +
+      '<button class="btn" id="dgCopy">' + svgIcon('copy') + '<span>复制诊断信息</span></button>' +
+      '<button class="btn" id="dgExport">' + svgIcon('download') + '<span>导出报告</span></button></div></div>' +
+    '<div class="grid2">' +
+      '<div class="card"><h3>' + svgIcon('cpu') + '服务健康（GET /health）</h3><div class="log" id="dgHealth">检测中…</div></div>' +
+      '<div class="card"><h3>' + svgIcon('monitor') + '访问地址（GET /api/system/access）</h3><div id="dgAccess"></div></div>' +
+    '</div>' +
+    '<div class="card"><h3>' + svgIcon('clock') + '服务端操作历史</h3><div class="log" id="dgHistory">加载中…</div></div>' +
+    '<div class="card"><h3>' + svgIcon('cli') + '前端日志（本页 console 与异常）</h3><div class="log" id="dgClients">正在采集…</div></div>' +
+    '<div class="card"><h3>' + svgIcon('info') + '环境信息</h3><dl class="kv" id="dgEnv"></dl></div>';
+  const refs = {health:$('#dgHealth', pane), access:$('#dgAccess', pane), history:$('#dgHistory', pane), clients:$('#dgClients', pane), env:$('#dgEnv', pane)};
+  async function loadHealth(){
+    refs.health.textContent = '检测中…';
+    try{ const h = await Data.health(); refs.health.textContent = JSON.stringify(h, null, 2); }
+    catch(e){ refs.health.innerHTML = '<span class="er">健康检查失败：' + esc(e.message) + '</span>'; }
+  }
+  async function loadAccess(){
+    try{
+      const a = await Data.access();
+      refs.access.innerHTML = '<dl class="kv">' +
+        '<dt>本机地址</dt><dd>' + esc(a.desktop_url || location.href) + ' <button class="btn sm ghost" data-copy="' + esc((a.desktop_url||'').replace('/live_console.html','/desktop.html')) + '">复制</button></dd>' +
+        '<dt>监听端口</dt><dd>' + esc(a.port || '—') + '</dd>' +
+        '<dt>同网段手机访问</dt><dd>' + ((a.lan_urls && a.lan_urls.length)
+          ? a.lan_urls.map(u => '<div>' + esc(u.replace('/live_console.html','/desktop.html')) + ' <button class="btn sm ghost" data-copy="' + esc(u.replace('/live_console.html','/desktop.html')) + '">复制</button></div>').join('')
+          : (MODE === 'demo' ? '离线演示模式无此信息' : '未检测到局域网地址')) + '</dd>' +
+        '<dt>分享限制</dt><dd>' + (a.same_network_only ? '仅同一局域网可直接访问；外网请用“外网分享给别人看.cmd”' : '—') + '</dd></dl>' +
+        '<div class="hint" style="margin-top:8px">局域网 http 访问时浏览器会禁用麦克风/摄像头；本机 127.0.0.1 不受限。</div>';
+      $$('[data-copy]', refs.access).forEach(b => b.addEventListener('click', () => copyText(b.dataset.copy, '地址')));
+    }catch(e){ refs.access.innerHTML = '<div class="hint">读取失败：' + esc(e.message) + '</div>'; }
+  }
+  function render(s){
+    if(!s) return;
+    const his = s.history || [];
+    refs.history.innerHTML = his.length
+      ? his.map(h => '<span class="' + (h.status === 'error' ? 'er' : h.status === 'warning' ? 'wa' : '') + '">' +
+          esc(fmtDT(new Date((h.time || 0) * 1000))) + ' [' + esc(h.type || '') + '] ' + esc(h.text || '') + '</span>').join('\n')
+      : '暂无操作记录。';
+  }
+  win.onStatus = render; if(ST) render(ST);
+  function renderEnv(){
+    const con = navigator.connection || {};
+    refs.env.innerHTML = [
+      ['运行模式', MODE === 'live' ? '连接本地服务（真实接口）' : '离线演示（不访问接口）'],
+      ['页面地址', location.href],
+      ['浏览器', navigator.userAgent],
+      ['屏幕 / 窗口', window.screen.width + '×' + window.screen.height + ' / ' + window.innerWidth + '×' + window.innerHeight],
+      ['语言 / 在线', navigator.language + ' / ' + (navigator.onLine ? '在线' : '离线')],
+      ['网络类型', con.effectiveType ? con.effectiveType + '（' + (con.downlink || '?') + ' Mbps）' : '浏览器未提供'],
+      ['已打开窗口', WM.wins.size + ' 个'],
+      ['本地存储项', (function(){ let n = 0; try{ for(const k in localStorage) if(k.indexOf('ailive.') === 0) n++; }catch(e){} return n; })() + ' 项（ailive.*）']
+    ].map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>').join('');
+  }
+  function renderClientLogs(){
+    refs.clients.innerHTML = CLIENT_LOGS.length
+      ? CLIENT_LOGS.slice(-60).map(l => '<span class="' + (l.level === 'error' ? 'er' : l.level === 'warn' ? 'wa' : '') + '">' +
+          esc(l.time) + ' [' + esc(l.level) + '] ' + esc(l.text) + '</span>').join('\n')
+      : '本页暂无前端错误或警告（已捕获 console.warn/error 与未处理异常）。';
+  }
+  renderClientLogs(); renderEnv(); loadHealth(); loadAccess();
+  /* 诊断报告：把面板里的关键信息拼成可交付的文本 */
+  function report(){
+    const a = (ST && ST.workflow) || {};
+    return [
+      appName() + ' 诊断报告',
+      '生成时间：' + new Date().toLocaleString('zh-CN'),
+      '运行模式：' + (MODE === 'live' ? 'live（真实服务 ' + location.host + '）' : 'demo（离线演示）'),
+      '页面地址：' + location.href,
+      '浏览器：' + navigator.userAgent,
+      '窗口数：' + WM.wins.size,
+      '直播状态：' + ((ST && ST.live_state) || '—') + '　输出连接：' + ((ST && ST.output_connected) ? '是' : '否'),
+      '开播检查：' + ((a.required_passed || 0) + '/' + (a.required_total || 0)) + '　阻塞项：' + ((a.blockers || []).length),
+      '服务健康：' + refs.health.textContent.slice(0, 600),
+      '访问地址：' + refs.access.textContent.slice(0, 400),
+      '前端日志：',
+      CLIENT_LOGS.slice(-40).map(l => l.time + ' [' + l.level + '] ' + l.text).join('\n') || '（无）'
+    ].join('\n');
+  }
+  const on = (id, fn) => { const b = document.getElementById(id); if(b) b.addEventListener('click', () => fn(b)); };
+  on('dgReload', async b => { busy(b, true); renderClientLogs(); renderEnv(); await loadHealth(); await loadAccess(); try{ await refreshStatus(false); }catch(e){} renderClientLogs(); busy(b, false); toast('ok','已重新检测','健康、地址、历史与前端日志均已刷新'); });
+  on('dgCopy', b => copyText(report(), '诊断报告'));
+  on('dgExport', b => { downloadText((isDesktop() ? 'AI数字人桌面版' : 'AI数字人-网页端') + '-诊断报告-' + Date.now() + '.txt', report()); toast('ok', '报告已导出', '文件已保存到浏览器下载目录'); });
+  return {refresh:async () => { await loadHealth(); await loadAccess(); }, onStatus:render};
+};
+
+
+/* ═══════════ 离线演示面板（复用）═══════════ */
+
+/* ── 13.6 离线演示：内嵌页面型窗口在 demo 模式下改为原生“演示面板” ── */
+const DEMO_SPEC = {
+  console:{title:'直播工作台（演示）', real:'/live_console.html',
+    points:['商品库与佣金管理','话术编辑、循环与防录播间隔','开播 SOP 检查中心','一键开播 / 安全下播 / 录制','模拟评论测试与链路判定'],
+    widget:'workbench'},
+  llm:{title:'大模型管理（演示）', real:'/llm.html',
+    points:['在 DeepSeek / 通义千问 / 自定义 OpenAI 兼容接口之间切换','填写并测试 API Key（服务端保存，不回显明文）','字幕自动回应的智能答疑链路（T2）'],
+    widget:'llm'},
+  subtitle:{title:'字幕自动回应（演示）', real:'/subtitle.html',
+    points:['截取屏幕并框选字幕区域','OCR 识别观众评论','命中高频话术走 T1 直答，未命中走 T2 大模型','可设置监控频率与回应方式'],
+    widget:'subtitle'},
+  catalog:{title:'达人带货商品库（演示）', real:'/accounts.html',
+    points:['记录平台商品ID、已核对价格、优惠与卖点','内部佣金只在后台可见，不会进入口播','素材授权与资质确认后再设为当前商品','一键生成合规话术'],
+    widget:'catalog'},
+  users:{title:'用户与会员管理（演示）', real:'/admin_users.html',
+    points:['生成激活码、调整套餐、重置密码、禁用账号','同一账号只允许一处登录（管理员不受限）','关闭自助注册后再公开分享地址'],
+    widget:'users'},
+  camera:{title:'虚拟摄像头（演示）', real:'/virtualcam.html',
+    points:['把数字人画面输出为虚拟摄像头设备','在直播伴侣中选择该设备作为视频源','仅管理员可见'],
+    widget:'camera'},
+  tutorial:{title:'使用教程（演示）', real:'/affiliate_tutorial.html',
+    points:['启动服务 → 连接数字人 → 录入商品 → 生成话术 → 彩排 → 开播','离线语音缓存预热：断网也能播高频话术','外网分享：cloudflared 隧道给外地评委/同事看','停播后执行“停止AI直播服务.cmd”'],
+    widget:'tutorial'},
+  stage:{title:'数字人直播画面（演示）', real:'/live_output.html',
+    points:['正式版：WebRTC 直连数字人画面与声音，9:16 竖屏输出','在直播伴侣中采集本窗口，并保留 AI 标识与水印','连接后工作台会显示“输出窗口已连接”'],
+    widget:'stage'}
+};
+PanelRegistry.demo = function(pane, win){
+  const app = win.app, spec = DEMO_SPEC[app.id] || {title:app.name + '（演示）', real:app.url || '—', points:[app.tip], widget:'generic'};
+  pane.innerHTML =
+    '<div class="banner warn">' + svgIcon('alert') + '<span><b>离线演示模式</b>：这里在正式版是真实页面 <code>' + esc(spec.real) + '</code>。' +
+      '当前未连接本地服务，本窗口展示的是演示内容，所有数据均为示例，不会调用任何接口。<br>启动 <code>一键启动AI数字人.cmd</code> 后从 <code>http://127.0.0.1:8010/desktop.html</code> 打开即为完整功能。</span></div>' +
+    '<div class="pane-head"><h2>' + esc(spec.title) + '</h2><div class="sp"><button class="btn sm ghost" id="dmCopy">' + svgIcon('copy') + '<span>复制正式页面地址</span></button>' +
+      '<button class="btn sm ghost" id="dmOpen">' + svgIcon('external') + '<span>尝试打开正式页面</span></button></div></div>' +
+    '<div class="card"><h3>' + svgIcon('check') + '这个窗口在正式版里能做什么</h3><ul class="chk-list">' +
+      spec.points.map(p => '<li class="pass"><span class="m">✓</span><span class="t"><b>' + esc(p) + '</b></span></li>').join('') + '</ul></div>' +
+    '<div id="dmWidget"></div>';
+  $('#dmCopy', pane).onclick = () => copyText('http://127.0.0.1:8010' + spec.real, '正式页面地址');
+  $('#dmOpen', pane).onclick = () => { const url = 'http://127.0.0.1:8010' + spec.real; openExternal(url); toast('info', '已尝试打开', '若服务未启动，浏览器会提示无法连接'); };
+  renderDemoWidget($('#dmWidget', pane), spec.widget, win);
+  return {onStatus:null};
+};
+/** 演示小组件：每个窗口给一点可操作的东西，让离线演示版不是空壳 */
+function renderDemoWidget(box, kind, win){
+  if(kind === 'stage'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('stage') + '演示画面（非真实数字人）</h3>' +
+      '<div class="hint" style="margin-bottom:8px">正式版这里是 WebRTC 数字人实时画面；演示版用本地绘制的占位画面表示，点“开始演示”可看口型节奏动画。</div>' +
+      '<div class="demo-stage" style="max-height:420px;margin:0 auto;width:min(240px,60%)"><canvas id="dmCanvas" width="270" height="480"></canvas></div>' +
+      '<div class="row" style="margin-top:10px;justify-content:center"><button class="btn primary" id="dmPlay">' + svgIcon('play') + '<span>开始演示</span></button>' +
+      '<button class="btn ghost" id="dmStop">' + svgIcon('stop') + '<span>停止</span></button></div></div>';
+    const cvs = $('#dmCanvas', box), ctx = cvs.getContext('2d');
+    let raf = null, t = 0;
+    function frame(){
+      t += 0.05;
+      const w = cvs.width, h = cvs.height;
+      ctx.clearRect(0, 0, w, h);
+      const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#12374e'); g.addColorStop(1, '#0b1e2b');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      /* 光晕 */
+      const r = ctx.createRadialGradient(w/2, h*0.32, 10, w/2, h*0.32, w*0.7);
+      r.addColorStop(0, 'rgba(56,189,248,.45)'); r.addColorStop(1, 'rgba(56,189,248,0)');
+      ctx.fillStyle = r; ctx.fillRect(0, 0, w, h);
+      /* 简笔数字人轮廓（无任何真实人脸素材） */
+      ctx.fillStyle = 'rgba(233,245,255,.92)';
+      ctx.beginPath(); ctx.arc(w/2, h*0.30, 46, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(w/2-70, h*0.62); ctx.quadraticCurveTo(w/2, h*0.40, w/2+70, h*0.62);
+      ctx.lineTo(w/2+58, h); ctx.lineTo(w/2-58, h); ctx.closePath(); ctx.fill();
+      /* 口型节奏（演示用，非真实口型驱动） */
+      const open = (Math.sin(t*4) * 0.5 + 0.5) * 16 + 4;
+      ctx.fillStyle = '#0b1e2b';
+      ctx.beginPath(); ctx.ellipse(w/2, h*0.335, 13, open/2 + 3, 0, 0, Math.PI*2); ctx.fill();
+      /* 音频电平条 */
+      for(let i = 0; i < 9; i++){
+        const bh = 8 + Math.abs(Math.sin(t*3 + i)) * 26;
+        ctx.fillStyle = 'rgba(125,224,255,.8)';
+        ctx.fillRect(30 + i*26, h - 46 - bh, 12, bh);
+      }
+      /* 字幕 */
+      ctx.fillStyle = 'rgba(6,26,44,.72)'; ctx.fillRect(12, h - 116, w - 24, 46);
+      ctx.fillStyle = '#dff1ff'; ctx.font = '13px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('AI 数字人 · 内容由人工值守（演示画面）', w/2, h - 88);
+      ctx.fillStyle = '#7dd8ff'; ctx.font = '11px "Segoe UI", sans-serif';
+      ctx.fillText('9:16 演示输出 · 未连接真实数字人', w/2, h - 70);
+      raf = requestAnimationFrame(frame);
+    }
+    $('#dmPlay', box).onclick = () => { if(raf) return; DEMO.connect(true); notify('ok', '演示数字人已连接', '（演示）工作台将显示“输出窗口已连接”'); frame(); };
+    $('#dmStop', box).onclick = () => { if(raf) cancelAnimationFrame(raf); raf = null; DEMO.connect(false); ctx.clearRect(0, 0, cvs.width, cvs.height); };
+    win.cleanups.push(() => { if(raf) cancelAnimationFrame(raf); });
+    return;
+  }
+  if(kind === 'workbench'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('console') + '演示：话术与模拟评论</h3>' +
+      '<div class="field"><span>话术队列（每行一条，演示数据可改，不会保存到服务端）</span><textarea id="dmScripts" style="min-height:96px"></textarea></div>' +
+      '<div class="row"><button class="btn primary" id="dmSaveScr">' + svgIcon('check') + '<span>保存到演示队列</span></button>' +
+      '<span class="hint" id="dmScrMsg"></span></div>' +
+      '<div class="field" style="margin-top:14px"><span>模拟一条观众评论</span><input type="text" id="dmSim" value="这个多少钱？有优惠券吗"></div>' +
+      '<div class="row"><button class="btn" id="dmSimRun">' + svgIcon('play') + '<span>走一遍判定链路</span></button></div>' +
+      '<div id="dmSimOut" style="margin-top:10px"></div></div>';
+    $('#dmScripts', box).value = DEMO.status().scripts.join('\n');
+    $('#dmSaveScr', box).onclick = () => {
+      const list = $('#dmScripts', box).value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      DEMO.log('scripts', '演示队列已更新为 ' + list.length + ' 条'); $('#dmScrMsg', box).textContent = '演示队列已更新为 ' + list.length + ' 条（本地）';
+    };
+    $('#dmSimRun', box).onclick = () => {
+      const r = DEMO.simulate($('#dmSim', box).value.trim(), false);
+      $('#dmSimOut', box).innerHTML = '<div class="row"><span class="badge info">' + esc(r.route_label) + '</span>' +
+        (r.keyword ? '<span class="badge">命中词：' + esc(r.keyword) + '</span>' : '') + '<span class="badge">' + esc(r.elapsed_ms) + ' ms</span></div>' +
+        '<dl class="kv" style="margin-top:8px"><dt>应答</dt><dd>' + esc(r.response || r.note || '（演示模式无大模型应答）') + '</dd></dl>';
+    };
+    return;
+  }
+  if(kind === 'llm'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('llm') + '演示：模型切换</h3>' +
+      '<div class="field"><span>供应商（正式版会保存到服务端并测试连通性）</span><select id="dmProvider">' +
+        '<option>DeepSeek</option><option>通义千问（DashScope）</option><option>自定义 OpenAI 兼容接口</option></select></div>' +
+      '<div class="field"><span>API Key（演示版不会发送任何网络请求）</span><input type="password" id="dmKey" placeholder="sk-…"></div>' +
+      '<div class="row"><button class="btn primary" id="dmTest">' + svgIcon('zap') + '<span>模拟连通性测试</span></button><span class="hint" id="dmTestMsg"></span></div></div>';
+    $('#dmTest', box).onclick = () => { const k = $('#dmKey', box).value.trim();
+      $('#dmTestMsg', box).textContent = k ? '（演示）格式看起来正常，长度 ' + k.length + '；正式版会由服务端真实调用 /api/llm/test' : '（演示）请先填写 Key；正式版会在服务端保存，不回显明文'; };
+    return;
+  }
+  if(kind === 'catalog'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('catalog') + '演示：商品库</h3><table class="tbl"><tr><th>商品</th><th>平台ID</th><th>已核对价格</th><th>状态</th></tr>' +
+      '<tr><td>纯棉宽松短袖T恤（演示）</td><td>DEMO-10086</td><td>199 元</td><td><span class="badge ok">当前商品</span></td></tr>' +
+      '<tr><td>轻量防晒外套（演示）</td><td>DEMO-10087</td><td>159 元</td><td><span class="badge">待核对</span></td></tr>' +
+      '<tr><td>便携保温杯（演示）</td><td>—</td><td>—</td><td><span class="badge warn">缺平台ID</span></td></tr></table>' +
+      '<div class="hint" style="margin-top:10px">正式版由 <code>/api/live/products</code> 提供真实商品库，写入需要专业版权限；佣金字段只在后台可见。</div></div>';
+    return;
+  }
+  if(kind === 'users'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('users') + '演示：会员与激活码</h3><table class="tbl"><tr><th>用户</th><th>套餐</th><th>状态</th></tr>' +
+      '<tr><td>admin（管理员）</td><td>专业版</td><td><span class="badge ok">正常</span></td></tr>' +
+      '<tr><td>guest01</td><td>免费版</td><td><span class="badge">正常</span></td></tr>' +
+      '<tr><td>guest02</td><td>免费版</td><td><span class="badge warn">已禁用</span></td></tr></table>' +
+      '<div class="hint" style="margin-top:10px">正式版由 <code>/api/auth/admin/*</code> 提供；同一账号只允许一处登录（管理员不受限）。</div></div>';
+    return;
+  }
+  if(kind === 'subtitle'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('subtitle') + '演示：字幕区域</h3>' +
+      '<div class="progress"><i style="width:38%"></i></div>' +
+      '<div class="hint" style="margin-top:8px">正式版流程：连接数字人 → 截取屏幕 → 框选字幕区域 → 启动监控。命中高频话术走 T1 意图直答，未命中走 T2 大模型。</div></div>';
+    return;
+  }
+  if(kind === 'camera'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('camera') + '演示：虚拟摄像头</h3>' +
+      '<div class="hint">正式版会把数字人画面输出为虚拟摄像头设备，供直播伴侣采集。需要管理员权限与服务端虚拟摄像头组件。</div></div>';
+    return;
+  }
+  if(kind === 'tutorial'){
+    box.innerHTML = '<div class="card"><h3>' + svgIcon('book') + '演示：开播流程速查</h3><ul class="chk-list">' +
+      ['① 双击“一键启动AI数字人.cmd”，等到窗口出现 8010 服务地址',
+       '② 登录后进入工作台（免费版可看、可模拟评论；连接数字人需专业版）',
+       '③ 录入商品并核对平台ID/价格/优惠/卖点，设为当前商品并生成话术',
+       '④ 打开 9:16 输出窗口，点“启动直播画面”建立 WebRTC 连接',
+       '⑤ 做总预检与人工确认项，彩排 1 分钟，检查声音与口型',
+       '⑥ 平台挂载同一商品 → 开播 → 全程真人值守、可随时打断',
+       '⑦ 停播后执行“停止AI直播服务.cmd”']
+      .map(x => '<li class="pass"><span class="m">✓</span><span class="t"><b>' + esc(x) + '</b></span></li>').join('') + '</ul></div>';
+    return;
+  }
+  box.innerHTML = '<div class="card"><h3>' + svgIcon('info') + '演示窗口</h3><div class="hint">' + esc(win.app.tip) + '</div></div>';
+}
+
+
+/* ═══════════ 前端日志采集（复用）═══════════ */
+/* ═══════════════════ 14. 前端日志采集（给“日志与诊断”用） ═══════════════════ */
+const CLIENT_LOGS = [];
+(function hookConsole(){
+  ['warn','error'].forEach(level => {
+    const orig = console[level].bind(console);
+    console[level] = function(){
+      try{ CLIENT_LOGS.push({time:fmtDT(new Date()), level:level, text:Array.prototype.map.call(arguments, a => typeof a === 'string' ? a : (a && a.message) || String(a)).join(' ')});
+        while(CLIENT_LOGS.length > 200) CLIENT_LOGS.shift(); }catch(e){}
+      orig.apply(null, arguments);
+    };
+  });
+  window.addEventListener('error', e => CLIENT_LOGS.push({time:fmtDT(new Date()), level:'error', text:(e.message || '未知错误') + ' @ ' + (e.filename || '') + ':' + (e.lineno || 0)}));
+  window.addEventListener('unhandledrejection', e => CLIENT_LOGS.push({time:fmtDT(new Date()), level:'error', text:'未处理的 Promise 拒绝：' + ((e.reason && e.reason.message) || e.reason || '')}));
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   17. 桌面应用外壳（常规软件布局：左导航 + 顶部工具栏/菜单 + 多标签内容区）
+   这一节是 app.html 自己的外壳；上面 0~16 节（含面板渲染器与状态轮询）与
+   desktop.html 同源，通过下面的 WM 兼容层原样复用，避免重复实现真实接口逻辑。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 17.1 兼容层：让复用来的面板 / 轮询 / 告警条原样工作 ───────────────── */
+const WM = {
+  wins: new Map(),          // 模块 id -> 伪窗口对象（面板用 onStatus/cleanups/body/app）
+  order: [],
+  mobile(){ return window.innerWidth <= 900; },
+  open(id){ openModule(id); },
+  close(id){ closeTab(id); },
+  closeAll(){ closeAllTabs(); },
+  minimizeAll(){ /* 标签式界面没有窗口最小化 */ },
+  focus(){}, setMax(){}, unminimize(){}, minimize(){},
+  readRect(){ return {x:0, y:0, w:0, h:0}; }
+};
+/* 复用代码里的桌面专属调用点（通知中心、启动器）在这里落空 */
+function closeStart(){}
+function closeCalendar(){}
+function layoutIcons(){}
+function applyWindowConstraints(){}
+function openApp(id){ openModule(id); }
+
+/* ── 17.1b iframe 嵌入模式：拆掉被嵌页面的"第二套外壳" ──────────────────
+   桌面外壳自己已经有品牌、左导航、标签栏、账号胶囊；而被嵌入的业务页面
+   （live_console / accounts / yamy …）独立访问时也需要那套导航，于是叠在一起
+   就成了"窗口套窗口、导航套导航"——最刺眼的是那条深紫色顶栏，以及它下面
+   重复的一行大标题和账号按钮。
+
+   这里在 iframe 每次加载完成后做减法（只注入一段 CSS，不改被嵌页面的 DOM
+   结构与脚本，也不改它的接口调用）：
+     ① 隐藏顶部导航条（品牌 + 模块链接 + 账号 + 连接状态）；
+     ② 隐藏页面大标题与副标题，只保留这一行右侧的工具按钮（如"手机访问地址"）；
+     ③ 隐藏页面内的账号 / 升级 / 退出，并把免费版提示压成一行。
+   只有同源才能这么做；独立用浏览器打开这些页面时不会生效，因为注入只发生在
+   外壳里。跨源、未就绪、页面还没 head 时静默跳过，绝不影响加载。 */
+const EMBED_CSS = [
+  /* ① 顶栏：品牌、模块链接、账号、连接状态，全由外壳提供 */
+  '#lt-nav-container, .lt-nav, header.topbar { display:none !important; }',
+  /* ② 标题行整行去掉：标题由外壳说明条承担，剩下的一颗"手机访问地址"按钮
+        （它只是跳到页面内已可见的"接入与帮助"标签页）留在这里反而像孤儿 */
+  '.page-heading, .page-heading .actions { display:none !important; }',
+  /* ③ 账号/升级/退出：外壳右上角账号胶囊负责 */
+  '#authBar, .auth-bar { display:none !important; }',
+  /* ④ 免费版提示：信息必须留，但压成一行，不要占掉半屏；
+        配色取外壳的主题色（变量由 embedFrame 注入），免得一块紫底跟在浅蓝外壳里 */
+  '#authBannerHost { margin-bottom:10px !important; }',
+  '#authBanner, .auth-banner { padding:8px 12px !important; margin:0 !important;',
+  '  border-radius:8px !important; gap:8px !important;',
+  '  background:var(--embed-warn-bg) !important; color:var(--embed-warn) !important;',
+  '  border:1px solid var(--embed-warn-line) !important; }',
+  '#authBanner .auth-banner-actions { gap:6px !important; }',
+  /* ⑤ 文字精简：状态格第三行小注、解释性副标题都去掉，卡片说明降到背景层。
+        这些是"实现细节"级别的文字，堆在界面里只会让人读得累。 */
+  'html.lt-embedded .stat-foot { display:none !important; }',
+  'html.lt-embedded .card-subtitle { display:none !important; }',
+  'html.lt-embedded .card .hint { font-size:11.5px !important; color:var(--text-muted); }',
+  /* ⑥ 页面底色交还给外壳：这些页面独立访问时给自己铺了整页背景（紫调渐变、
+        粉色渐变…），嵌进来就是"灰画布上贴了一块别的颜色的矩形"。置空后卡片
+        直接落在外层画布上，整屏只有一个背景色。 */
+  'html.lt-embedded, html.lt-embedded body { background:transparent !important;',
+  '  background-image:none !important; background-attachment:scroll !important; }',
+  /* ⑥ 页面内的"返回 xxx"由外壳左导航替代，留着只是一颗孤立按钮 */
+  'html.lt-embedded .page-heading a[href*="live_console"],',
+  'html.lt-embedded .page-heading .back-link { display:none !important; }',
+  /* ⑦ 主色对齐：这些页面用的是靛蓝紫（--primary #4f46e5 / --accent #7c3aed），
+        外壳是天蓝。两套主色并排就是"两个系统硬拼"。这里只映射强调色与浅色底，
+        不动 --primary 本体（它承担按钮白字的对比度，换了怕读不清）。 */
+  'html.lt-embedded {',
+  '  --accent: var(--embed-brand-strong);',
+  '  --accent-light: var(--embed-brand-soft);',
+  '  --primary-light: var(--embed-brand-soft);',
+  '  --primary-border: var(--embed-brand-ring);',
+  '}',
+  /* ⑧ 这些页面按"独立访问"留了首屏边距，嵌入后收紧，内容更贴标签栏 */
+  'main.container, .container.lc-main { padding-top:8px !important; }'
+].join('\n');
+
+/* 升级 / 无权限提示页用的轻量版：只去掉顶栏与账号区。
+   这两页的 .page-heading 是页面主标题（"升级会员"/"需要更高权限"），
+   属于内容本身，不能像业务页那样整行隐藏。 */
+const EMBED_CSS_BLOCK = [
+  '#lt-nav-container, .lt-nav { display:none !important; }',
+  '#authBar, .auth-bar { display:none !important; }',
+  '.page-heading { margin-top:0 !important; }'
+].join('\n');
+
+function embedFrame(frame){
+  let doc = null;
+  try{ doc = frame.contentDocument; }catch(e){ return false; }   /* 跨源：跳过 */
+  if(!doc || !doc.documentElement) return false;
+  let path = '', isBlock = false;
+  try{
+    path = (doc.location && doc.location.pathname) || '';
+    /* 登录页在外壳里出现属于异常情况（会话过期），保持原生样式不动 */
+    if(/login\.html$/.test(path)) return true;
+    /* 升级 / 无权限提示页只做轻量处理：隐藏顶栏与账号区，保留页面主标题 */
+    isBlock = /(upgrade|forbidden)\.html$/.test(path);
+  }catch(e){}
+  try{
+    doc.documentElement.classList.add('lt-embedded');
+    let st = doc.getElementById('lt-embed-style');
+    if(!st){
+      st = doc.createElement('style');
+      st.id = 'lt-embed-style';
+      (doc.head || doc.documentElement).appendChild(st);
+    }
+    /* 同一个 iframe 可能先从业务页跳到升级页：每次都要按当前页面类型重写规则，
+       不能"注入过就跳过"。 */
+    st.textContent = isBlock ? EMBED_CSS_BLOCK : EMBED_CSS;
+    applyEmbedVars(doc);
+    syncFrameTheme(frame);
+    return true;
+  }catch(e){ return false; }   /* 页面正在导航或已卸载，下一次尝试会补上 */
+}
+
+/* 为什么不能只等 load：iframe 的 load 要等页面所有资源（字体、封面图、脚本）
+   都就绪才触发，实测 live_console 在 1.8s 时还没到 load，而页面早就画出来了 ——
+   用户会先看到完整的紫色顶栏和一行大标题，几百毫秒后才"啪"地消失，比不改还难受。
+   所以从设置 src 开始就按 60ms 轮询尝试注入（注入幂等，有 id 就跳过），
+   页面 head 一就绪就生效；真正的 load 事件到了再兜底补一次并停表。 */
+function startEmbedPolling(frame){
+  let n = 0;
+  const iv = setInterval(() => {
+    if(embedFrame(frame) || ++n > 120){ clearInterval(iv); }   /* 最多试 ~7.2s */
+  }, 60);
+  frame.addEventListener('load', () => { clearInterval(iv); embedFrame(frame); }, {once: true});
+}
+
+/* ── 17.1c 模块说明条 ──────────────────────────────────────────────
+   去掉被嵌页面自己的大标题与工具行之后，"这个模块是干什么的"就没有地方说了：
+   标签栏只有一个名字，左导航也只有名字，点进来只看到一堆卡片。
+   这里在 iframe 上方补一条 40px 的说明条：图标 + APPS 里现成的一句话 tip +
+   "重新载入本页"。原生面板不需要它（它们自己带 pane-head 大标题与说明）。 */
+function buildPaneBar(app, win){
+  return el('div', {class: 'pane-bar'},
+    el('span', {class: 'ic', html: svgIcon(app.icon)}),
+    el('span', {class: 'tx', text: app.tip || ('「' + app.name + '」')}),
+    el('button', {
+      class: 'pane-bar-btn', type: 'button', title: '重新载入本页',
+      onclick: () => {
+        try{ win.iframe.contentWindow.location.reload(); }
+        catch(e){ if(win.iframe) win.iframe.src = win.iframe.src; }
+      }
+    }, el('span', {html: svgIcon('refresh')}))
+  );
+}
+
+/* 外壳切深色时，嵌进来的页面也跟着切 —— 否则深色壳里嵌一块白页面，比原来更"套娃"。
+   这些页面本身支持 body.dark / html.dark-theme（见 common.css 与 yamy）。
+   顺带把 --embed-* 变量重算一遍：注入时拿的是当时的主题色，切了主题不更新的话，
+   提示条会一直是浅色那条（深色界面里一块米黄，很扎眼）。 */
+function applyEmbedVars(doc){
+  try{
+    const cs = getComputedStyle(document.documentElement);
+    const pick = (n, fb) => (cs.getPropertyValue(n) || '').trim() || fb;
+    const root = doc.documentElement;
+    root.style.setProperty('--embed-warn', pick('--warn', '#c47f0a'));
+    root.style.setProperty('--embed-warn-bg', pick('--warn-bg', '#fdf3e2'));
+    root.style.setProperty('--embed-warn-line',
+      'color-mix(in srgb, ' + pick('--warn', '#c47f0a') + ' 24%, transparent)');
+    /* 主色：嵌入页的强调色跟着外壳的品牌色走（见 EMBED_CSS ⑦） */
+    root.style.setProperty('--embed-brand-strong', pick('--brand-strong', '#0ea5e9'));
+    root.style.setProperty('--embed-brand-soft', pick('--brand-soft', '#e0f2fe'));
+    root.style.setProperty('--embed-brand-ring', pick('--brand-ring', 'rgba(14,165,233,.34)'));
+  }catch(e){}
+}
+function syncFrameTheme(frame){
+  if(!frame) return;
+  let doc = null;
+  try{ doc = frame.contentDocument; }catch(e){ return; }
+  if(!doc || !doc.documentElement) return;
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  try{
+    doc.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    doc.documentElement.classList.toggle('dark-theme', dark);
+    if(doc.body) doc.body.classList.toggle('dark', dark);
+    applyEmbedVars(doc);
+  }catch(e){}
+}
+function syncAllFrameThemes(){
+  WM.wins.forEach(win => { if(win.iframe) syncFrameTheme(win.iframe); });
+}
+/* 主题一变就同步给所有已打开的嵌入页。用 MutationObserver 而不是包装 applySettings，
+   这样不管主题是设置面板改的、跟随系统变的还是快捷键切的，都能跟上。 */
+try{
+  new MutationObserver(syncAllFrameThemes).observe(
+    document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+}catch(e){}
+
+/* ── 17.1d 补两个模块图标（ICONS 是 const 对象，这里加属性即可）─────── */
+ICONS.avatarFace = '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="10" r="2.6"/>' +
+  '<path d="M7.6 18c.7-2.3 2.5-3.5 4.4-3.5s3.7 1.2 4.4 3.5"/>';
+ICONS.wave = '<path d="M4 10v4M8 7v10M12 4.5v15M16 8v8M20 11v2"/>';
+
+/* ── 17.2 设置默认值补齐（沿用同一份设置存取，只多几个应用项）─────────── */
+Object.assign(DEFAULTS, {
+  navCollapsed: false,
+  confirmCloseTab: false,
+  autoOpenLast: true,
+  tabs: ['control'],
+  activeTab: 'control'
+});
+S = Object.assign({}, DEFAULTS, S || {});
+
+/* ── 17.3 导航分组 ───────────────────────────────────────────────────── */
+const NAV_GROUPS = [
+  {title: '核心', ids: ['control', 'stage', 'avatar', 'tts', 'console', 'sop']},
+  {title: '运营', ids: ['catalog', 'llm', 'subtitle', 'yamy']},
+  {title: '管理', ids: ['users', 'camera', 'dashboard']},
+  {title: '帮助与设置', ids: ['tutorial', 'logs', 'settings', 'about']}
+];
+
+/* ── 17.3a 新增模块：Yamy 2.5D 数字宠物（项目内静态页，双音色）───────────
+   页面文件：web\yamy\index.html（由 tmp\build_yamy.py 由 yamy_25d 原型生成），
+   素材：web\yamy\assets\yamy-spritesheet.png、web\yamy\audio\timbre-1|2.m4a。
+   always:true —— 纯本地静态页，演示模式（服务未连上）也直接内嵌 iframe，
+   不走 PanelRegistry.demo 的演示面板。
+   注：这里用 push 追加而不是改 desktop.html 里的 APPS —— 装配脚本按行号切片
+   复用 desktop.html，往切片里插行会让后面所有切片错位。 */
+APPS.push({
+  id: 'yamy', name: 'Yamy 2.5D 数字宠物', icon: 'stage', w: 1080, h: 760,
+  url: '/yamy/index.html', allow: 'microphone; autoplay', cat: '运营', always: true,
+  tip: '2.5D 精灵动画数字宠物：两种本地音色试听、口型随音频振幅变化'
+});
+APP_MAP.yamy = APPS[APPS.length - 1];
+
+/* ── 17.3b 补回被顶栏带走的入口 ────────────────────────────────────────
+   旧顶栏（common.js 的 LT.Nav）里「内容配置」下有两个页面：数字人形象
+   (/avatar.html) 与 语音合成 (/tts/index.html，换音色的地方)。它们从来没被
+   收进外壳的模块表，一直只能从顶栏进。去嵌套把顶栏整条隐藏之后，这两个入口
+   就彻底消失了（用户反馈"控制中心无法调控数字人形象和音色"）。
+   这里按 Yamy 的方式 push 进 APPS，并在 NAV_GROUPS 里排进「核心」组；
+   顺带把「交互面板」(dashboard.html) 也收进来，避免同类页面再丢。 */
+APPS.push(
+  { id: 'avatar', name: '数字人形象', icon: 'avatarFace', w: 1120, h: 780,
+    url: '/avatar.html', cat: '核心', always: true,
+    tip: '选择或生成数字人形象，查看模型与驱动参数' },
+  { id: 'tts', name: '语音合成', icon: 'wave', w: 1040, h: 760,
+    url: '/tts/index.html', cat: '核心', always: true,
+    tip: '音色与 TTS 引擎：换音色、调语速、试听合成效果' },
+  { id: 'dashboard', name: '交互面板', icon: 'grid', w: 1120, h: 800,
+    url: '/dashboard.html', cat: '管理', always: true,
+    tip: '运行状态、会话与资源占用的看板' }
+);
+APP_MAP.avatar = APPS[APPS.length - 3];
+APP_MAP.tts = APPS[APPS.length - 2];
+APP_MAP.dashboard = APPS[APPS.length - 1];
+
+/* ── 17.3c 文案压缩：模块说明改成短标签 ────────────────────────────
+   原来每个模块的 tip 是二三十字的完整句子（"选择或生成数字人形象，查看模型与
+   驱动参数"），铺在说明条和 hover 提示里都很长。这里统一换成 4~8 个字的关键词，
+   只回答"这个模块管什么"。搜索仍然按关键词匹配（tip 参与过滤）。 */
+const SHORT_TIPS = {
+  control: '连接 · 播报 · 状态',
+  stage: '9:16 输出画面',
+  avatar: '形象与模型',
+  tts: '音色与语速',
+  console: '开播控制台',
+  sop: '开播前检查',
+  catalog: '商品与佣金',
+  llm: '对话模型',
+  subtitle: '字幕识别',
+  yamy: '数字宠物',
+  users: '账号与套餐',
+  camera: '输出到直播软件',
+  dashboard: '运行看板',
+  tutorial: '上手引导',
+  logs: '日志与自检',
+  settings: '外观与服务',
+  about: '版本信息'
+};
+APPS.forEach(a => { if (SHORT_TIPS[a.id]) a.tip = SHORT_TIPS[a.id]; });
+/** 是否当前账号无权限（只做视觉提示；能不能开由服务端判定） */
+function appLockTag(app){
+  if(MODE !== 'live' || !ACCOUNT || !ACCOUNT.entitlements) return null;
+  const need = app.plan;
+  if(!need) return null;
+  return ACCOUNT.entitlements[need] ? null : (need === 'admin.users' || need === 'avatar.manage' ? '管理员' : '专业版');
+}
+function renderNav(filter){
+  const box = $('#navList'); if(!box) return;
+  const q = (filter || '').trim().toLowerCase();
+  box.innerHTML = '';
+  let shown = 0;
+  NAV_GROUPS.forEach(g => {
+    const apps = g.ids.map(id => APP_MAP[id]).filter(Boolean)
+      .filter(a => !q || a.name.toLowerCase().indexOf(q) >= 0 || (a.tip || '').toLowerCase().indexOf(q) >= 0 || a.id.indexOf(q) >= 0);
+    if(!apps.length) return;
+    box.appendChild(el('div', {class: 'grp', text: g.title}));
+    apps.forEach(app => {
+      const tag = appLockTag(app);
+      const open = WM.wins.has(app.id);
+      box.appendChild(el('button', {
+        class: 'nav' + (open && currentApp() && currentApp().id === app.id ? ' on' : ''),
+        dataset: {app: app.id}, title: app.tip || app.name, type: 'button',
+        onclick: () => { openModule(app.id); closeNavDrawer(); }
+      },
+        el('span', {class: 'ic', html: svgIcon(app.icon)}),
+        /* 名字 + 一句话说明：原来只有名字，要 hover 一秒才出系统提示，
+           点进去之前根本不知道这个模块是干什么的 */
+        /* 单行：图标 + 名字（+ 权限标签）。模块说明不铺在导航里 ——
+           17 项都挂两行说明，侧栏会变成一张密密麻麻的清单，反而更难扫。
+           说明只出现在两处：顶部说明条（当前模块的一句话）、hover 提示。 */
+        el('span', {class: 'nm', text: app.name}),
+        tag ? el('span', {class: 'tag pro', text: tag}) : null,
+        open ? el('span', {class: 'tag open-dot', title: '已打开'}) : null
+      ));
+      shown++;
+    });
+  });
+  if(!shown) box.appendChild(el('div', {class: 'empty', text: '没有匹配的模块'}));
+}
+
+/* ── 17.4 标签系统 ──────────────────────────────────────────────────── */
+function currentApp(){
+  const id = $('#tabbar') && $('#tabbar').dataset.active;
+  return id ? APP_MAP[id] : null;
+}
+function findTabBtn(id){ return $('#tabbar') ? $('.tab[data-app="' + id + '"]') : null; }
+
+/** 打开模块：已有标签则激活（同一模块只有一个标签） */
+function openModule(id, opt){
+  const app = APP_MAP[id];
+  if(!app){ toast('err', '模块不存在', id); return; }
+  if(WM.wins.has(id)){ activateTab(id); return WM.wins.get(id); }
+  opt = opt || {};
+
+  const pane = el('div', {class: 'pane', dataset: {app: id}, role: 'tabpanel'});
+  const body = el('div', {class: 'pane-body'});
+  pane.appendChild(body);
+  $('#panes').appendChild(pane);
+
+  const win = {id: id, app: app, pane: pane, body: body, cleanups: [], onStatus: null, paneRefresh: null, iframe: null};
+  const renderer = app.native ? PanelRegistry[app.native] : ((MODE === 'demo' && !app.always) ? PanelRegistry.demo : null);
+  if(renderer){
+    /* 原生面板（控制中心 / SOP / 日志诊断 / 设置 / 关于 / 演示） */
+    body.classList.add('scroll');
+    const host = el('div', {class: 'wm-pane', dataset: {pane: id}});
+    body.appendChild(host);
+    try{
+      const ret = renderer(host, win);
+      if(ret && typeof ret === 'object'){
+        if(typeof ret.refresh === 'function') win.paneRefresh = ret.refresh;
+        if(typeof ret.onStatus === 'function') win.onStatus = ret.onStatus;
+        if(typeof ret.cleanup === 'function') win.cleanups.push(ret.cleanup);
+      }
+    }catch(e){
+      host.innerHTML = '';
+      host.appendChild(el('div', {class: 'card'}, el('h3', {html: svgIcon('alert') + '面板渲染失败'}), el('div', {class: 'hint', text: String(e && e.message || e)})));
+      console.error('面板渲染失败', id, e);
+    }
+  }else if(app.url){
+    /* 真实页面：内嵌 iframe（同源，带 samesite cookie，权限仍由服务端判定） */
+    const loading = el('div', {class: 'frame-loading'}, el('div', {text: '正在载入 ' + app.name + ' …'}), el('div', {class: 'bar'}, el('i')));
+    const frame = el('iframe', {title: app.name, src: 'about:blank'});
+    if(app.allow) frame.setAttribute('allow', app.allow);
+    body.classList.add('has-bar');
+    body.appendChild(buildPaneBar(app, win));
+    body.appendChild(frame); body.appendChild(loading);
+    let guard = setTimeout(() => {
+      loading.style.display = 'none';
+      showFrameAlert(win, '页面加载较慢或服务未就绪，可点工具栏「刷新」或用浏览器打开重试。', false);
+    }, 15000);
+    frame.addEventListener('load', () => {
+      clearTimeout(guard); loading.style.display = 'none';
+      /* 嵌进来的页面不需要再画一遍品牌/导航/账号（见 17.1b） */
+      embedFrame(frame);
+      try{
+        const p = frame.contentWindow.location.pathname;
+        if(p === '/login.html') showFrameAlert(win, '该模块需要登录：服务端已跳转到登录页，登录后即可正常使用。', false);
+        else if(p === '/upgrade.html') showFrameAlert(win, '该模块属于专业版功能：服务端已跳转到升级页（外壳不会替你放行）。', false);
+        else if(p === '/forbidden.html') showFrameAlert(win, '该模块仅管理员可见：服务端已拦截。', true);
+      }catch(e){}
+    });
+    frame.src = app.url;
+    win.iframe = frame;
+    startEmbedPolling(frame);
+  }else{
+    body.appendChild(el('div', {class: 'empty', text: '该模块暂未接入内容。'}));
+  }
+
+  WM.wins.set(id, win); WM.order.push(id);
+  addTabBtn(app, win);
+  activateTab(id);
+  renderNav($('#navSearch') ? $('#navSearch').value : '');
+  saveSession();
+  return win;
+}
+
+function addTabBtn(app, win){
+  const btn = el('button', {class: 'tab', dataset: {app: app.id}, title: app.name, type: 'button',
+    role: 'tab', 'aria-selected': 'false'},
+    el('span', {class: 'ic', html: svgIcon(app.icon)}),
+    el('span', {class: 'tt', text: app.name}),
+    el('span', {class: 'x', html: svgIcon('close'), title: '关闭标签（Ctrl+W）', 'aria-hidden': 'true'})
+  );
+  btn.addEventListener('click', e => {
+    if(e.target.closest('.x')){ e.stopPropagation(); closeTab(app.id); return; }
+    activateTab(app.id);
+  });
+  btn.addEventListener('auxclick', e => { if(e.button === 1){ e.preventDefault(); closeTab(app.id); } });
+  /* 右键标签：批量关标签的唯一入口（标签多到一屏放不下时尤其需要） */
+  btn.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const ids = WM.order.slice();
+    const i = ids.indexOf(app.id);
+    const others = ids.filter(x => x !== app.id);
+    popMenu(btn, [
+      {label: '关闭', icon: 'close', kbd: 'Ctrl+W', action: () => closeTab(app.id)},
+      {label: '关闭其他标签', icon: 'close', disabled: !others.length, action: () => closeTabs(others, app.id)},
+      {label: '关闭右侧标签', icon: 'close', disabled: i < 0 || i >= ids.length - 1,
+       action: () => closeTabs(ids.slice(i + 1), app.id)},
+      {sep: true},
+      {label: '全部关闭', icon: 'close', disabled: ids.length < 2,
+       action: () => closeTabs(WM.order.slice(), null)}
+    ]);
+  });
+  $('#tabbar').appendChild(btn);
+  syncTabbar();
+  revealTab(btn);
+}
+
+function activateTab(id){
+  const win = WM.wins.get(id); if(!win) return;
+  WM.order = WM.order.filter(x => x !== id); WM.order.push(id);
+  $$('#panes .pane').forEach(p => p.classList.toggle('on', p.dataset.app === id));
+  $$('#tabbar .tab').forEach(b => {
+    const on = b.dataset.app === id && !b.classList.contains('tab-hint');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  $('#tabbar').dataset.active = id;
+  const app = APP_MAP[id];
+  if(app){
+    $('#crumbTitle').textContent = app.name;
+    $('#crumbSub').textContent = app.tip || '';
+    document.title = app.name + ' · ' + appName();
+    syncWindowTitle();
+  }
+  renderNav($('#navSearch') ? $('#navSearch').value : '');
+  revealTab(findTabBtn(id));
+  /* 原生面板在切回来时刷新一次（约 1.2s 内不重复打接口） */
+  if(win.paneRefresh && Date.now() - (win._lastRefresh || 0) > 1200){
+    win._lastRefresh = Date.now();
+    try{ win.paneRefresh(); }catch(e){}
+  }
+  if(win.onStatus && ST){ try{ win.onStatus(ST); }catch(e){} }
+  saveSession();
+}
+
+/** 关闭单个标签。quiet=true 时不弹“已关闭”提示（批量关闭用，避免刷一屏提示条）。 */
+function closeTab(id, quiet){
+  const win = WM.wins.get(id); if(!win) return;
+  const doClose = () => {
+    win.cleanups.forEach(fn => { try{ fn(); }catch(e){} });
+    if(win.iframe) win.iframe.src = 'about:blank';
+    win.pane.remove();
+    const btn = findTabBtn(id); if(btn) btn.remove();
+    WM.wins.delete(id); WM.order = WM.order.filter(x => x !== id);
+    if($('#tabbar').dataset.active === id){
+      const next = WM.order[WM.order.length - 1];
+      if(next) activateTab(next);
+      else {
+        $('#tabbar').dataset.active = '';
+        $('#crumbTitle').textContent = '工作台';
+        $('#crumbSub').textContent = '';
+        document.title = appName();
+        syncWindowTitle();
+        showWelcome();
+      }
+    }
+    syncTabbar(); renderNav($('#navSearch') ? $('#navSearch').value : ''); saveSession();
+    if(!quiet) toast('info', '已关闭「' + win.app.name + '」');
+  };
+  if(S.confirmCloseTab && !quiet) confirmBox('关闭标签', '确定关闭「' + win.app.name + '」吗？' + (win.app.id === 'stage' ? '直播画面会断开。' : ''), doClose);
+  else doClose();
+}
+
+/** 批量关闭：只留一条汇总提示，关闭后把 focusId 激活（null 表示全部关闭）。 */
+function closeTabs(ids, focusId){
+  const list = (ids || []).filter(id => WM.wins.has(id));
+  if(!list.length) return;
+  list.forEach(id => closeTab(id, true));
+  if(focusId && WM.wins.has(focusId)) activateTab(focusId);
+  toast('info', '已关闭 ' + list.length + ' 个标签');
+}
+
+function closeAllTabs(){ closeTabs(WM.order.slice(), null); }
+
+function syncTabbar(){
+  const bar = $('#tabbar'); if(!bar) return;
+  const hint = $('.tab-hint', bar); if(hint) hint.remove();
+  if(!WM.wins.size) bar.appendChild(el('div', {class: 'tab-hint', text: '还没有打开任何模块 —— 从左侧导航选一个开始'}));
+  $('#stTabs').textContent = WM.wins.size;
+  updateTabnav();
+}
+
+/* ── 标签栏溢出：滚动按钮 / 滚轮 / 激活项自动进视野 ────────────────────
+   标签数量一多，靠 overflow-x:auto 是「看不见也点不到」的：滚动条高度被设成 0，
+   没有提示，用户只能盲滚。这里给出三条可见路径：两端箭头（仅在溢出时出现）、
+   垂直滚轮转横向滚动、切标签时自动把当前标签滚进视野。 */
+function updateTabnav(){
+  const wrap = $('#tabwrap'), bar = $('#tabbar'); if(!wrap || !bar) return;
+  const max = bar.scrollWidth - bar.clientWidth;
+  wrap.classList.toggle('overflow', max > 2);
+  const prev = $('#tabPrev'), next = $('#tabNext');
+  if(prev) prev.disabled = bar.scrollLeft <= 1;
+  if(next) next.disabled = bar.scrollLeft >= max - 1;
+}
+/** 把一个标签滚进可见范围（只滚标签条，不动页面） */
+function revealTab(btn){
+  const bar = $('#tabbar'); if(!bar || !btn) return;
+  const b = btn.getBoundingClientRect(), r = bar.getBoundingClientRect();
+  if(b.left < r.left) bar.scrollLeft -= (r.left - b.left + 10);
+  else if(b.right > r.right) bar.scrollLeft += (b.right - r.right + 10);
+  updateTabnav();
+}
+function scrollTabs(dir){
+  const bar = $('#tabbar'); if(!bar) return;
+  const step = Math.max(160, Math.round(bar.clientWidth * 0.7));
+  bar.scrollBy({left: dir * step, behavior: 'smooth'});
+  setTimeout(updateTabnav, 260);
+}
+
+function showWelcome(){
+  const panes = $('#panes');
+  $$('#panes .pane').forEach(p => p.classList.remove('on'));
+  let w = $('#welcome');
+  if(!w){
+    w = el('div', {class: 'pane on', id: 'welcome'},
+      el('div', {class: 'welcome'},
+        el('h2', {text: '欢迎使用 ' + appName()}),
+        el('p', {class: 'lead', text: '左侧是功能模块，打开后会在上方形成标签页，可同时开着直播画面和商品库。'}),
+        el('div', {class: 'grid', id: 'welcomeGrid'})
+      ));
+    panes.appendChild(w);
+  }
+  w.classList.add('on');
+  const grid = $('#welcomeGrid'); grid.innerHTML = '';
+  ['control', 'stage', 'console', 'sop', 'catalog', 'yamy', 'logs'].forEach(id => {
+    const app = APP_MAP[id]; if(!app) return;
+    grid.appendChild(el('button', {class: 'card-link', type: 'button', onclick: () => openModule(id)},
+      el('span', {class: 'ic', html: svgIcon(app.icon)}),
+      el('span', {}, el('span', {class: 't', text: app.name}), el('span', {class: 'd', text: app.tip || ''}))
+    ));
+  });
+}
+
+/* ── 17.5 账号 / 状态栏 / 会话持久化 ──────────────────────────────── */
+function hasBridge(){ return !!(window.pywebview && window.pywebview.api); }
+function bridge(name, ...args){
+  if(!hasBridge() || typeof window.pywebview.api[name] !== 'function') return Promise.resolve(null);
+  try{ return Promise.resolve(window.pywebview.api[name](...args)); }catch(e){ return Promise.resolve(null); }
+}
+
+/* ── 17.5a 端区分：桌面端（AILiveDesktop 宿主）↔ 网页端（纯浏览器）──────────
+   同一份界面两端共用，但**桌面专属能力不能出现在网页端**（打开文件夹 / 重启服务 /
+   服务托管 / 退出应用 / 项目根目录…），网页端也不该自称“桌面版”。
+   判定依据两条，缺一不可：
+     · 宿主加载自带界面时 URL 一定带 ?host=1（见 app\app.py 的 ui_entry_url()），
+       这条不依赖 pywebview 注入时序，窗口刚打开就能判对；
+     · window.pywebview.api（宿主桥接）存在，则是桌面端。
+   网页端两者都为假 → 只渲染端中立的入口。 */
+function isDesktop(){ return params.get('host') === '1' || hasBridge(); }
+/** 应用名（按端区分，避免网页端自称“桌面版”） */
+function appName(){ return isDesktop() ? 'AI 数字人桌面版' : 'AI 数字人 · 网页端'; }
+/** 端专属外观：标题 / 品牌小字 / 工具栏按钮文案（启动时调用，桥接就绪后再调一次） */
+function applyEndChrome(){
+  const desk = isDesktop();
+  document.title = desk ? 'AI 数字人桌面版' : 'AI 数字人 · 网页端';
+  const h1 = document.querySelector('#boot h1'); if(h1) h1.textContent = desk ? 'AI 数字人桌面版' : 'AI 数字人';
+  const foot = $('#bootFoot'); if(foot) foot.textContent = 'LiveTalking 本地服务 · ' + (desk ? '桌面应用' : '网页端') + ' v' + APP_VERSION;
+  const ver = $('#brandVer'); if(ver) ver.textContent = desk ? '桌面版' : '网页端';
+  const be = $('#btnExternal'); if(be){
+    be.title = desk ? '用系统浏览器打开当前模块' : '在新标签页打开当前模块';
+    const lb = be.querySelector('.btn-label'); if(lb) lb.textContent = desk ? '浏览器' : '新标签';
+  }
+}
+function renderAccount(){
+  const u = ACCOUNT && ACCOUNT.user ? ACCOUNT.user : null;
+  const name = u ? (u.display_name || u.username) : (MODE === 'live' ? '未登录' : '演示账号');
+  const plan = u ? (u.plan_label || u.plan || '免费版') : (MODE === 'live' ? '—' : '演示');
+  $('#userName').textContent = name;
+  $('#userPlan').textContent = plan;
+  $('#userAv').textContent = String(name).slice(0, 1).toUpperCase();
+  $('#stAccount').textContent = (u ? (u.is_admin ? '管理员 · ' : '用户 · ') + name + ' · ' + plan : '未登录') +
+    (MODE === 'live' ? '' : ' · 离线演示');
+  const foot = $('#sideFoot');
+  if(foot){
+    /* 侧栏底部只留一行：原来"服务地址/端口/账号"三行，与底部状态栏的
+       「服务 在线 / 用户 xxx」完全重复，还占掉导航的高度。 */
+    if(MODE === 'live'){
+      foot.innerHTML = '<b>' + esc(location.host) + '</b> · ' + esc(name);
+    }else{
+      foot.innerHTML = '<b>离线演示</b> · 示例数据';
+    }
+  }
+}
+function renderStatusBar(s){
+  s = s || ST;
+  const dot = $('#stSvcDot');
+  if(MODE !== 'live'){ dot.className = 'dot warn'; $('#stSvc').textContent = '离线演示'; }
+  else if(s){ dot.className = 'dot ok'; $('#stSvc').textContent = '在线'; }
+  else { dot.className = 'dot err'; $('#stSvc').textContent = '离线'; }
+  const names = {idle: '待机', preparing: '准备中', ready: '就绪', rehearsal: '彩排中', live: '直播中', stopping: '停播中', ended: '已结束'};
+  $('#stLive').textContent = s ? (names[s.live_state] || s.live_state || '—') : '—';
+  $('#stOutput').textContent = s ? (s.output_connected ? '已连接' : '未连接') : '—';
+  const p = s && s.sales && s.sales.current_product ? s.sales.current_product : null;
+  $('#stProduct').textContent = p ? (p.title || p.name || p.platform_product_id || '已设置') : '未设置';
+  $('#stTabs').textContent = WM.wins.size;
+}
+function saveSession(){
+  S.tabs = WM.order.slice();
+  S.activeTab = $('#tabbar') ? ($('#tabbar').dataset.active || '') : '';
+  saveSettings();
+}
+/** 包一层状态轮询：把每次真实状态同步到状态栏（面板由 refreshStatus 内部回调） */
+const __refreshStatusInner = refreshStatus;
+refreshStatus = async function(manual){
+  const s = await __refreshStatusInner(manual);
+  renderStatusBar(s);
+  return s;
+};
+
+/* ── 17.6 弹出菜单（菜单行 / 账号胶囊 / 设置入口）──────────────────── */
+function popMenu(anchor, items){
+  const box = $('#popMenu') || el('div', {class: 'popmenu', id: 'popMenu'});
+  if(!box.parentNode) document.body.appendChild(box);
+  box.innerHTML = '';
+  items.forEach(it => {
+    if(it.sep){ box.appendChild(el('div', {class: 'sep'})); return; }
+    box.appendChild(el('button', {
+      class: 'it' + (it.danger ? ' danger' : ''), type: 'button', disabled: !!it.disabled,
+      onclick: () => { closePop(); it.action && it.action(); }
+    },
+      it.icon ? el('span', {class: 'ic', html: svgIcon(it.icon)}) : null,
+      el('span', {class: 'lbl', text: it.label}),
+      it.kbd ? el('span', {class: 'kb', text: it.kbd}) : null
+    ));
+  });
+  const r = anchor.getBoundingClientRect();
+  box.classList.add('open');
+  const w = box.offsetWidth, h = box.offsetHeight;
+  box.style.left = Math.max(6, Math.min(r.left, window.innerWidth - w - 6)) + 'px';
+  box.style.top = Math.min(r.bottom + 4, window.innerHeight - h - 6) + 'px';
+  /* 只给菜单栏按钮点亮 .on；标签也有 .on（表示“当前标签”），挂上就会被看成激活态 */
+  if(anchor.classList.contains('mi')) anchor.classList.add('on');
+  else anchor.classList.add('pop-anchor');
+  setTimeout(() => document.addEventListener('pointerdown', onDocDownForPop, true), 0);
+}
+function onDocDownForPop(e){ if(!e.target.closest('#popMenu') && !e.target.closest('.mi') && !e.target.closest('#userChip')) closePop(); }
+function closePop(){
+  const box = $('#popMenu'); if(box) box.classList.remove('open');
+  $$('#menubar .mi').forEach(b => b.classList.remove('on'));
+  $$('.pop-anchor').forEach(b => b.classList.remove('pop-anchor'));
+  document.removeEventListener('pointerdown', onDocDownForPop, true);
+}
+function currentPlatformUrl(){
+  const app = currentApp();
+  return app && app.url ? app.url : null;
+}
+
+/* ── 17.7 事件绑定 ─────────────────────────────────────────────────── */
+function bindShell(){
+  $('#navToggle').addEventListener('click', toggleNav);
+  /* 窄屏时抽屉是浮层：点遮罩 / 点某个模块后自动收起，否则要手动再点汉堡，
+     而且浮层会一直盖在内容上（点哪都点不动，像卡死）。 */
+  $('#content').addEventListener('pointerdown', () => { if(narrowNav()) closeNavDrawer(); }, true);
+  $('#navSearch').addEventListener('input', e => renderNav(e.target.value));
+  $('#navSearch').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ const first = $('#navList .nav'); if(first) first.click(); }
+    if(e.key === 'Escape'){ e.target.value = ''; renderNav(''); }
+  });
+
+  $('#btnRefresh').addEventListener('click', async () => {
+    try{ await refreshStatus(true); }catch(e){}
+    const app = currentApp(); const win = app && WM.wins.get(app.id);
+    if(win){
+      if(win.paneRefresh){ try{ win.paneRefresh(); }catch(e){} }
+      if(win.iframe){ const bar = document.getElementById('wmAlerts_' + win.id); if(bar) bar.remove(); win.iframe.src = win.app.url; }
+    }
+    /* 不再补一条 toast('已刷新')：refreshStatus(true) 内部已经弹过"状态已刷新"，
+       两条叠在一起既重复又挡住右下角内容。 */
+  });
+  $('#btnExternal').addEventListener('click', () => {
+    const url = currentPlatformUrl();
+    if(!url){ toast('info', '无需浏览器打开', '当前模块是应用内置面板。'); return; }
+    if(hasBridge()) bridge('open_external', location.origin + url);
+    else openExternal(url);
+  });
+  $('#notifyBtn').addEventListener('click', () => openNotes());
+  $('#npClear').addEventListener('click', () => { NOTES.length = 0; renderNotes(); $('#npList').innerHTML = '<div class="np-empty">暂无通知</div>'; toast('ok', '通知已清空'); });
+  $('#btnSettings').addEventListener('click', () => openModule('settings'));
+  $('#userChip').addEventListener('click', () => {
+    const desk = isDesktop();
+    const items = [
+      {label: '账号与套餐', icon: 'user', action: () => openModule('about')},
+      {label: '用户与会员管理', icon: 'users', action: () => openModule('users')},
+      {sep: true},
+      {label: desk ? '用浏览器打开工作台' : '在新标签页打开工作台', icon: 'external',
+       action: () => desk ? bridge('open_external', location.origin + '/live_console.html') : openExternal('/live_console.html')}
+    ];
+    /* 打开项目文件夹是桌面宿主能力，网页端不显示（不是“显示但禁用”） */
+    if(desk) items.push({label: '打开项目文件夹', icon: 'folder', action: () => bridge('open_project_folder')});
+    items.push({sep: true},
+      {label: '退出登录', icon: 'power', danger: true, action: () => confirmBox('退出登录',
+        '将退出当前账号并回到登录页' + (desk ? '；本应用不会停止数字人服务。' : '。'), () => { location.href = '/api/auth/logout'; }, true)});
+    popMenu($('#userChip'), items);
+  });
+
+  $('#menuFile').addEventListener('click', e => {
+    const items = [
+      {label: '打开控制中心', icon: 'control', action: () => openModule('control')},
+      {label: '打开数字人直播画面', icon: 'stage', action: () => openModule('stage')},
+      {label: '打开直播工作台', icon: 'console', action: () => openModule('console')},
+      {sep: true},
+      {label: '关闭当前标签', icon: 'close', kbd: 'Ctrl+W', disabled: !currentApp(), action: () => closeTab(currentApp().id)},
+      {label: '关闭全部标签', icon: 'close', disabled: !WM.wins.size, action: () => closeAllTabs()}
+    ];
+    /* “退出应用”是桌面宿主的动作：网页端直接关标签页即可，不给这条入口 */
+    if(isDesktop()) items.push({sep: true}, {label: '退出应用', icon: 'power', kbd: 'Ctrl+Q', danger: true, action: exitApp});
+    popMenu(e.currentTarget, items);
+  });
+  $('#menuView').addEventListener('click', e => popMenu(e.currentTarget, [
+    {label: '刷新状态', icon: 'refresh', kbd: 'Ctrl+R', action: () => $('#btnRefresh').click()},
+    {label: S.theme === 'dark' ? '切换到浅色主题' : '切换到深色主题', icon: 'image', action: () => {
+      S.theme = S.theme === 'dark' ? 'light' : 'dark'; saveSettings(); applySettings(); toast('ok', '主题模式：' + (S.theme === 'dark' ? '深色' : '浅色'));
+    }},
+    {label: (navHidden() ? '显示' : '隐藏') + '左侧导航', icon: 'grid', kbd: 'Ctrl+B', action: toggleNav},
+    {label: '重置界面设置', icon: 'restore', action: () => confirmBox('重置界面设置', '将恢复主题、布局等界面设置（不影响商品与话术）。', () => {
+      S = Object.assign({}, DEFAULTS); saveSettings(); applySettings(); renderNav(''); toast('ok', '已恢复默认界面设置');
+    })},
+    {sep: true},
+    {label: '全屏显示', icon: 'monitor', action: () => hasBridge() ? bridge('toggle_fullscreen') : (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}))}
+  ]));
+  $('#menuService').addEventListener('click', e => {
+    const desk = isDesktop();
+    const items = [
+      {label: '重新读取运行状态', icon: 'cpu', action: () => $('#btnRefresh').click()},
+      {label: '打开日志与诊断', icon: 'logs', action: () => openModule('logs')},
+      {label: '查看服务日志（末尾 200 行）', icon: 'cli', action: () => openModule('logs')}
+    ];
+    /* 日志文件夹 / 重启服务 / 停在浏览器里打开，都只在桌面宿主下才有意义 */
+    if(desk){
+      items.splice(2, 0, {label: '打开日志文件夹', icon: 'folder', action: () => bridge('open_log_folder')});
+      items.push({sep: true},
+        {label: '重启数字人服务', icon: 'power', action: () => confirmBox('重启数字人服务', '会断开当前数字人连接并重新加载模型（约 30-60 秒）。继续？', async () => {
+          toast('warn', '正在重启服务', '请等待状态栏恢复“在线”。', 8000);
+          await bridge('restart_service');
+        }, true)});
+    }
+    items.push({sep: true},
+      {label: desk ? '在浏览器里打开工作台' : '在新标签页打开工作台', icon: 'external',
+       action: () => desk ? bridge('open_external', location.origin + '/live_console.html') : openExternal('/live_console.html')});
+    popMenu(e.currentTarget, items);
+  });
+  $('#menuHelp').addEventListener('click', e => popMenu(e.currentTarget, [
+    {label: '使用教程', icon: 'book', action: () => openModule('tutorial')},
+    {label: '关于本应用', icon: 'info', kbd: 'F1', action: () => openModule('about')},
+    {label: '键盘快捷键', icon: 'keyboard', action: showShortcuts},
+    {sep: true},
+    {label: '手机访问地址', icon: 'external', action: async () => {
+      const data = await apiGet('/api/system/access').catch(() => null);
+      const urls = data && data.lan_urls && data.lan_urls.length ? data.lan_urls.join('\n') : '未发现局域网地址（请确认已连 Wi-Fi 或网线）';
+      modal({title: '手机 / 其它设备访问地址', body: '<div class="hint" style="user-select:text;white-space:pre-wrap">' + esc(urls) + '</div>', buttons: [{text: '知道了', primary: true, action: closeModal}]});
+    }},
+    {label: '合规与授权提示', icon: 'alert', action: () => modal({title: '合规与授权提示', body: '<div class="hint" style="user-select:text">① 直播平台要求标明 AI 生成时请照做，并保留 LiveTalking 水印/标识；<br>② 不要使用无授权的人脸、声音、音乐或商品素材；<br>③ 直播期间保留真人值守和随时接管能力。</div>', buttons: [{text: '知道了', primary: true, action: closeModal}]})}
+  ]));
+
+  $('#tabPrev').addEventListener('click', () => scrollTabs(-1));
+  $('#tabNext').addEventListener('click', () => scrollTabs(1));
+  /* 竖滚轮在标签条上转成横向滚动（鼠标没有横向滚轮时的常见做法） */
+  $('#tabbar').addEventListener('wheel', e => {
+    const bar = e.currentTarget;
+    if(bar.scrollWidth <= bar.clientWidth) return;
+    const d = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if(!d) return;
+    e.preventDefault();
+    bar.scrollLeft += d;
+    updateTabnav();
+  }, {passive: false});
+  $('#tabbar').addEventListener('scroll', updateTabnav, {passive: true});
+
+  window.addEventListener('resize', () => {
+    if($('#popMenu')) closePop();
+    if(!narrowNav()) closeNavDrawer(true);
+    updateTabnav();
+    /* 关于/日志面板里有“窗口 1440×900”这类实时数值，改了窗口大小要重画一次 */
+    const app = currentApp(), win = app && WM.wins.get(app.id);
+    if(win && win.paneRefresh && (app.id === 'about' || app.id === 'logs')){
+      clearTimeout(win._rzTimer);
+      win._rzTimer = setTimeout(() => { try{ win.paneRefresh(); }catch(e){} }, 240);
+    }
+  }, {passive: true});
+  window.addEventListener('beforeunload', () => { try{ saveSession(); }catch(e){} });
+}
+
+/* ── 侧栏开关：宽屏折叠 / 窄屏抽屉 ───────────────────────────────────
+   同一个按钮两种语义：宽屏把左栏折叠成 0 列（记住设置），窄屏开关浮层抽屉。
+   宽屏也能用很重要 —— 打开「数字人直播画面」时，用户最想做的就是让画面占满宽度。 */
+function toggleNav(){
+  const root = document.documentElement;
+  const btn = $('#navToggle');
+  if(narrowNav()){
+    const open = root.dataset.nav === 'open';
+    root.dataset.nav = open ? '' : 'open';
+    if(btn) btn.setAttribute('aria-expanded', String(!open));
+    return;
+  }
+  const collapsed = root.dataset.nav === 'collapsed';
+  root.dataset.nav = collapsed ? '' : 'collapsed';
+  S.navCollapsed = !collapsed;
+  saveSettings();
+  if(btn) btn.setAttribute('aria-expanded', String(collapsed));
+}
+
+let __lastWinTitle = '';
+/** 把 document.title 同步到原生窗口标题（任务栏 / Alt+Tab 才能看出当前模块）。
+    网页端没有宿主桥接，document.title 本身已经够了，直接跳过。
+    值没变就不重复推 —— 每次切换标签都会走这里，重复 IPC 没有意义。 */
+function syncWindowTitle(){
+  if(!hasBridge()) return;
+  const t = document.title || '';
+  if(!t || t === __lastWinTitle) return;
+  __lastWinTitle = t;
+  bridge('set_window_title', t);
+}
+
+/* ── 窄屏导航抽屉（≤900px 时侧栏是浮层）────────────────────────────── */
+function narrowNav(){ return window.innerWidth <= 900; }
+/** 侧栏当前是否处于“看不见”的状态（宽屏折叠 或 窄屏抽屉收起） */
+function navHidden(){
+  const nav = document.documentElement.dataset.nav;
+  return narrowNav() ? nav !== 'open' : nav === 'collapsed';
+}
+/** force=true 表示无条件收起（窗口变宽后清掉残留的 open 状态） */
+function closeNavDrawer(force){
+  if(!force && !narrowNav()) return;
+  if(document.documentElement.dataset.nav === 'open'){
+    document.documentElement.dataset.nav = '';
+    const t = $('#navToggle'); if(t) t.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function showShortcuts(){
+  const rows = [
+    ['Ctrl + R', '刷新状态与当前标签'], ['Ctrl + W', '关闭当前标签'], ['Ctrl + Tab / Ctrl + Shift + Tab', '下一个 / 上一个标签'],
+    ['Ctrl + 1…9', '切换到第 N 个标签'], ['Ctrl + B', '显示 / 隐藏左侧导航'], ['Ctrl + K', '定位到左侧搜索'], ['Ctrl + ,', '打开设置'],
+    ['Ctrl + L', '打开日志与诊断'], ['F1', '关于本应用']
+  ];
+  if(isDesktop()) rows.push(['Ctrl + Q', '退出应用']);   /* 网页端没有“退出应用” */
+  rows.push(['Esc', '关闭弹窗 / 菜单']);
+  modal({title: '键盘快捷键', body: '<div class="kv">' + rows.map(r => '<dt><kbd style="font-family:inherit;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px">' + esc(r[0]) + '</kbd></dt><dd>' + esc(r[1]) + '</dd>').join('') + '</div>', buttons: [{text: '知道了', primary: true, action: closeModal}]});
+}
+
+function exitApp(){
+  /* 只有桌面宿主才谈得上“退出应用”：网页端直接关标签页 */
+  if(!isDesktop()){ toast('info', '网页端没有“退出应用”', '直接关闭浏览器标签页即可；数字人服务由外部进程运行。'); return; }
+  confirmBox('退出应用', '将关闭本应用；因为数字人服务由本应用启动，退出时会同时停止服务。', async () => {
+    await bridge('exit_app');
+  }, true);
+}
+
+/* ── 17.8 快捷键 ──────────────────────────────────────────────────── */
+function bindShortcuts(){
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ closePop(); if($('#modalLayer').classList.contains('open')) closeModal(); return; }
+    const ctrl = e.ctrlKey || e.metaKey;
+    if(!ctrl){ if(e.key === 'F1'){ e.preventDefault(); openModule('about'); } return; }
+    const k = e.key.toLowerCase();
+    if(k === 'r'){ e.preventDefault(); $('#btnRefresh').click(); }
+    else if(k === 'w'){ e.preventDefault(); if(currentApp()) closeTab(currentApp().id); }
+    else if(k === 'k'){ e.preventDefault(); $('#navSearch').focus(); $('#navSearch').select(); }
+    else if(k === 'b'){ e.preventDefault(); toggleNav(); }
+    else if(k === ','){ e.preventDefault(); openModule('settings'); }
+    else if(k === 'l'){ e.preventDefault(); openModule('logs'); }
+    else if(k === 'q'){ if(!isDesktop()) return; e.preventDefault(); exitApp(); }
+    else if(k === 'tab'){
+      e.preventDefault();
+      const ids = WM.order.slice(); if(ids.length < 2) return;
+      const cur = currentApp() ? currentApp().id : ids[ids.length - 1];
+      const i = ids.indexOf(cur);
+      const next = ids[(i + (e.shiftKey ? -1 : 1) + ids.length) % ids.length];
+      activateTab(next);
+    }
+    else if(/^[1-9]$/.test(k)){
+      const ids = WM.order.slice(); const id = ids[Number(k) - 1];
+      if(id){ e.preventDefault(); activateTab(id); }
+    }
+  });
+}
+
+/* ── 17.8b 全局事件（通知面板收起 / 运行模式说明 / 系统主题跟随 / 网络变化）── */
+function bindAppGlobals(){
+  $('#modeChip').addEventListener('click', () => {
+    if(MODE === 'live') modal({title: '运行模式：已连接本地服务', icon: 'cpu',
+      body: '<p>本应用由 LiveTalking 服务（<code>' + esc(location.host) + '</code>）提供界面：内嵌标签是真实业务页面，原生标签直接调用真实接口。</p>' +
+            '<p class="hint">接口清单：/api/live/status｜/api/live/speak｜/api/live/simulate｜/api/live/autopilot｜/api/live/interrupt｜/api/live/emergency-stop｜/api/live/recording｜/api/workflow/preflight｜/api/workflow/start｜/api/workflow/stop｜/api/system/access｜/health</p>',
+      buttons: [{text: '打开日志与诊断', primary: true, action: () => { closeModal(); openModule('logs'); }}, {text: '知道了', action: closeModal}]});
+    else modal({title: '运行模式：离线演示', icon: 'alert',
+      body: '<p>未连接本地服务，当前为离线演示模式：界面数据为演示数据，不会发起任何网络请求。</p>' +
+            '<p class="hint">要使用完整功能：双击桌面上的「AI 数字人桌面版」图标启动应用，或先运行 <code>一键启动AI数字人.cmd</code> 再从 <code>http://127.0.0.1:8010/app.html</code> 打开。</p>',
+      buttons: [{text: '知道了', action: closeModal}]});
+  });
+  document.addEventListener('pointerdown', e => {
+    if(!e.target.closest('#notifyPanel') && !e.target.closest('#notifyBtn')) openNotes(false);
+  }, true);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(S.theme === 'auto') applySettings(); });
+  window.addEventListener('online', () => notify('ok', '网络已恢复', '本机 127.0.0.1 服务不受影响。', true));
+  window.addEventListener('offline', () => notify('warn', '网络已断开', '本机服务仍可用；云端模型与平台接口会失败。', true));
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) refreshStatus(false).catch(() => {}); });
+}
+
+/* ── 17.9 桌面宿主（pywebview）桥接 ───────────────────────────────────
+   同一份 app.html 两端共用：桌面端由 pywebview 注入 window.pywebview.api，提供“打开系统
+   浏览器 / 文件夹 / 重启服务 / 退出应用 / 全屏”等本机能力；网页端（纯浏览器）这些
+   **桌面专属入口直接不渲染**（判定见 17.5a 的 isDesktop()），不是显示成禁用状态。 */
+const APP_HOST = {managed: false, version: '', frozen: false, project_root: '', log_dir: '', webview: '', host_os: '', python: ''};
+function hostReady(){
+  if(!hasBridge()) return;
+  applyEndChrome();   /* 桥接就绪后重判一次端（防止窗口打开瞬间桥接还没注入） */
+  bridge('get_app_info').then(info => {
+    if(info && typeof info === 'object'){ Object.assign(APP_HOST, info); }
+    const v = $('#brandVer');
+    if(v) v.textContent = '桌面版 v' + (APP_HOST.version || APP_VERSION) + (APP_HOST.managed ? ' · 已托管服务' : '');
+    renderAccount(); renderStatusBar();
+    const w = WM.wins.get('about');
+    if(w && w.paneRefresh){ try{ w.paneRefresh(); }catch(e){} }
+  });
+}
+window.addEventListener('pywebviewready', hostReady);
+setTimeout(() => { if(hasBridge() && !APP_HOST.version) hostReady(); }, 1200);
+
+/** 打开链接：桌面版交给系统浏览器，浏览器版退回 window.open */
+function openExternal(url){
+  const abs = (() => { try{ return new URL(url, location.href).href; }catch(e){ return url; } })();
+  if(hasBridge()){ bridge('open_external', abs); return; }
+  window.open(abs, '_blank', 'noopener');
+}
+
+/* ── 17.10 应用设置面板（外观 / 行为 / 服务 / 数据）──────────────────── */
+PanelRegistry.settings = function(pane, win){
+  let tab = 'look';
+  const segOf = (key, pairs) => '<div class="seg" data-seg="' + key + '">' + pairs.map(([v, n]) =>
+    '<button data-v="' + v + '" class="' + (String(S[key]) === String(v) ? 'on' : '') + '">' + n + '</button>').join('') + '</div>';
+  const sw = key => '<span class="switch' + (S[key] ? ' on' : '') + '" data-sw="' + key + '" role="switch" aria-checked="' + !!S[key] + '" tabindex="0"></span>';
+  const setRow = (label, desc, control) => '<div class="set-row"><div class="info"><b>' + esc(label) + '</b><span>' + esc(desc) + '</span></div>' + control + '</div>';
+  const ACCENTS = [['sky', '#38bdf8', '浅蓝（默认）'], ['azure', '#60a5fa', '天蓝'], ['cyan', '#22d3ee', '青蓝'], ['teal', '#2dd4bf', '青绿'], ['indigo', '#818cf8', '靛蓝']];
+
+  function draw(){
+    pane.innerHTML =
+      '<div class="pane-head"><h2>设置</h2><div class="sp"><span class="hint">改动即时生效并保存在本机</span>' +
+        '<button class="btn ghost" id="setReset">' + svgIcon('refresh') + '<span>恢复默认</span></button></div></div>' +
+      '<div class="tabs" id="setTabs"><button data-t="look">外观</button><button data-t="act">行为</button>' +
+        '<button data-t="svc">服务</button><button data-t="data">数据</button></div><div id="setBody"></div>';
+    $$('#setTabs button', pane).forEach(b => b.addEventListener('click', () => { tab = b.dataset.t; draw(); }));
+    const cur = $('#setTabs button[data-t="' + tab + '"]', pane); if(cur) cur.classList.add('on');
+    drawTab(tab);
+    $('#setReset', pane).onclick = () => confirmBox('恢复默认设置', '将恢复主题、行为等全部界面设置（不影响商品、话术与账号）。', () => {
+      S = Object.assign({}, DEFAULTS); saveSettings(); applySettings(); draw();
+      toast('ok', '已恢复默认', '界面设置已重置');
+    }, true);
+  }
+
+  function drawTab(t){
+    const body = $('#setBody', pane);
+    if(t === 'look'){
+      body.innerHTML =
+        '<div class="card"><h3>' + svgIcon('image') + '主题</h3>' +
+          setRow('主题模式', '浅色 / 深色 / 跟随 Windows', segOf('theme', [['light', '浅色'], ['dark', '深色'], ['auto', '跟随系统']])) +
+          setRow('主色', '默认浅蓝，可换同色系变体', '<div class="swatches" data-sw2="accent">' +
+            ACCENTS.map(([v, c, n]) => '<span class="sw' + (S.accent === v ? ' on' : '') + '" data-v="' + v + '" title="' + n + '" style="background:' + c + '"></span>').join('') + '</div>') +
+        '</div>' +
+        '<div class="card"><h3>' + svgIcon('monitor') + '界面</h3>' +
+          setRow('界面动画', '关闭可减少低配设备的开销', sw('animations')) +
+          setRow('弹出提示', '操作结果用右下角提示条反馈', sw('toasts')) +
+        '</div>';
+    }
+    if(t === 'act'){
+      body.innerHTML =
+        '<div class="card"><h3>' + svgIcon('grid') + '启动与标签</h3>' +
+          setRow('恢复上次打开的标签', '下次启动自动恢复退出前打开的模块', sw('autoOpenLast')) +
+          setRow('启动时自动打开', '服务就绪后额外打开一个模块', '<select id="setAuto"><option value="">不额外打开</option>' +
+            APPS.map(a => '<option value="' + a.id + '"' + ((S.autoOpen || [])[0] === a.id ? ' selected' : '') + '>' + esc(a.name) + '</option>').join('') + '</select>') +
+          setRow('关闭标签前确认', '避免误关「数字人直播画面」', sw('confirmCloseTab')) +
+        '</div>' +
+        '<div class="card"><h3>' + svgIcon('refresh') + '状态刷新</h3>' +
+          setRow('轮询间隔', '越短越及时，越费资源（默认 4 秒）', segOf('pollMs', [[2000, '2 秒'], [4000, '4 秒'], [6000, '6 秒'], [10000, '10 秒'], [15000, '15 秒']])) +
+          '<div class="hint">数字人连接、录制、自动话术等状态变化都会按这个间隔读取，并推送通知。</div>' +
+        '</div>';
+    }
+    if(t === 'svc'){
+      const desk = isDesktop();
+      const managed = APP_HOST.managed;
+      const kv = [
+        '<dt>服务地址</dt><dd>' + esc(MODE === 'live' ? location.origin : '未连接（离线演示）') + '</dd>',
+        '<dt>端口</dt><dd>' + esc(BASE_PORT) + '</dd>',
+        '<dt>运行模式</dt><dd>' + (MODE === 'live' ? '<span class="badge ok">已连接真实服务</span>' : '<span class="badge warn">离线演示</span>') + '</dd>'
+      ];
+      const btns = ['<button class="btn ghost" id="svcProbe">' + svgIcon('refresh') + '<span>重新读取状态</span></button>'];
+      if(desk){
+        /* 这三行/三个按钮都是桌面宿主的能力：服务托管、界面内核、重启服务、本地文件夹 */
+        kv.push('<dt>服务托管</dt><dd>' + (managed ? '<span class="badge ok">由本应用启动</span> 退出应用会一并停止' : '<span class="badge info">外部启动</span> 退出应用不会停止它') + '</dd>');
+        kv.push('<dt>界面内核</dt><dd>' + esc(APP_HOST.webview || 'WebView2') + '</dd>');
+        btns.push('<button class="btn ghost" id="svcRestart">' + svgIcon('power') + '<span>重启服务</span></button>');
+        btns.push('<button class="btn ghost" id="svcLogDir">' + svgIcon('folder') + '<span>日志文件夹</span></button>');
+        btns.push('<button class="btn ghost" id="svcPkgDir">' + svgIcon('folder') + '<span>项目文件夹</span></button>');
+      }
+      body.innerHTML =
+        '<div class="card"><h3>' + svgIcon('cpu') + '本地服务</h3><div class="kv">' + kv.join('') +
+        '</div><div class="row" style="margin-top:12px">' + btns.join('') + '</div>' +
+        '<div class="hint" style="margin-top:10px">' +
+          (desk ? '服务由本应用托管：重启服务与打开本地文件夹只在桌面应用里可用。'
+                : '当前是网页端：服务由外部进程提供，网页端不会重启/停止服务，也没有本机文件夹入口。') +
+          '安全操作（打断播报 / 紧急停止 / 安全下播）不受套餐限制，任何时候都能用。</div></div>';
+    }
+    if(t === 'data'){
+      body.innerHTML =
+        '<div class="card"><h3>' + svgIcon('save') + '设置备份</h3>' +
+          '<div class="row"><button class="btn ghost" id="dataExport">' + svgIcon('download') + '<span>导出设置</span></button>' +
+          '<button class="btn ghost" id="dataImport">' + svgIcon('play') + '<span>导入设置</span></button>' +
+          '<button class="btn ghost" id="dataClear">' + svgIcon('trash') + '<span>清空本机缓存</span></button></div>' +
+          '<div class="hint" style="margin-top:10px">设置只保存在本机（localStorage：' + esc(LS_KEY) + '），不会上传到服务器。</div>' +
+        '</div>' +
+        '<div class="card"><h3>' + svgIcon('info') + '当前设置</h3><div class="hint" style="user-select:text;white-space:pre-wrap">' + esc(JSON.stringify(S, null, 2)) + '</div></div>';
+    }
+    bindControls(body);
+  }
+
+  function bindControls(body){
+    $$('[data-seg]', body).forEach(seg => seg.addEventListener('click', e => {
+      const b = e.target.closest('button'); if(!b) return;
+      const key = seg.dataset.seg;
+      const val = (key === 'pollMs') ? Number(b.dataset.v) : b.dataset.v;
+      S[key] = val; saveSettings(); applySettings();
+      $$('button', seg).forEach(x => x.classList.toggle('on', x === b));
+      if(key === 'pollMs') startPolling();
+      toast('ok', '设置已保存', '已更新：' + b.textContent);
+    }));
+    $$('[data-sw2]', body).forEach(box => box.addEventListener('click', e => {
+      const swatch = e.target.closest('.sw'); if(!swatch) return;
+      S.accent = swatch.dataset.v; saveSettings(); applySettings();
+      $$('.sw', box).forEach(x => x.classList.toggle('on', x === swatch));
+    }));
+    $$('[data-sw]', body).forEach(sp => {
+      const toggle = () => {
+        const key = sp.dataset.sw; S[key] = !S[key];
+        sp.classList.toggle('on', !!S[key]); sp.setAttribute('aria-checked', !!S[key]);
+        saveSettings(); applySettings();
+      };
+      sp.addEventListener('click', toggle);
+      sp.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } });
+    });
+    const auto = $('#setAuto', body); if(auto) auto.addEventListener('change', e => {
+      S.autoOpen = e.target.value ? [e.target.value] : []; saveSettings(); toast('ok', '已保存', '下次启动生效');
+    });
+    const probe = $('#svcProbe', body); if(probe) probe.addEventListener('click', async () => { try{ await refreshStatus(true); }catch(e){} draw(); });
+    const restart = $('#svcRestart', body); if(restart) restart.addEventListener('click', () => confirmBox('重启数字人服务', '会断开当前连接并重新加载模型（约 30-60 秒）。继续？', async () => {
+      toast('warn', '正在重启服务', '请等待状态栏恢复“在线”。', 8000); await bridge('restart_service');
+    }, true));
+    const ld = $('#svcLogDir', body); if(ld) ld.addEventListener('click', () => bridge('open_log_folder'));
+    const pd = $('#svcPkgDir', body); if(pd) pd.addEventListener('click', () => bridge('open_project_folder'));
+    const ex = $('#dataExport', body); if(ex) ex.addEventListener('click', () => downloadText('ai-live-settings.json', JSON.stringify(S, null, 2)));
+    const im = $('#dataImport', body); if(im) im.addEventListener('click', () => promptBox('导入设置', '粘贴之前导出的设置 JSON', '', v => {
+      try{
+        const obj = JSON.parse(v);
+        S = Object.assign({}, DEFAULTS, obj); saveSettings(); applySettings(); startPolling(); draw();
+        toast('ok', '已导入设置');
+      }catch(e){ toast('err', '导入失败', '不是有效的 JSON'); }
+    }));
+    const cl = $('#dataClear', body); if(cl) cl.addEventListener('click', () => confirmBox('清空本机缓存', '将删除本机保存的界面设置并重新加载应用。', () => {
+      try{ localStorage.removeItem(LS_KEY); }catch(e){}
+      location.reload();
+    }, true));
+  }
+
+  draw();
+  return {refresh: draw};
+};
+
+/* ── 17.11 关于面板（应用 / 账号 / 服务 / 环境 / 合规）────────────────── */
+PanelRegistry.about = function(pane, win){
+  function draw(){
+    const desk = isDesktop();
+    const u = ACCOUNT && ACCOUNT.user ? ACCOUNT.user : null;
+    const feats = ACCOUNT && ACCOUNT.entitlements ? Object.keys(ACCOUNT.entitlements).filter(k => ACCOUNT.entitlements[k]) : [];
+    const stat = (lab, val, sm) => '<div class="stat"><div class="lab">' + esc(lab) + '</div><div class="val' + (sm ? ' sm' : '') + '">' + esc(val) + '</div></div>';
+    pane.innerHTML =
+      '<div class="pane-head"><h2>关于 ' + appName() + '</h2><div class="sp">' +
+        '<button class="btn ghost" id="abCopy">' + svgIcon('copy') + '<span>复制诊断信息</span></button>' +
+        '<button class="btn ghost" id="abDocs">' + svgIcon('book') + '<span>使用教程</span></button></div></div>' +
+      '<div class="card"><h3>' + svgIcon('info') + '应用信息</h3><div class="stats">' +
+        stat('应用版本', APP_VERSION) + stat('运行模式', MODE === 'live' ? '连接真实服务' : '离线演示', true) +
+        /* 服务托管 / 界面内核是桌面宿主的信息，网页端改为说明自己运行在浏览器里 */
+        (desk
+          ? stat('服务托管', APP_HOST.managed ? '由本应用启动' : '外部启动', true) + stat('界面内核', APP_HOST.webview || 'WebView2', true)
+          : stat('运行端', '网页端（浏览器）', true)) +
+      '</div><div class="kv" style="margin-top:12px">' +
+        '<dt>服务地址</dt><dd>' + esc(MODE === 'live' ? location.origin : '未连接') + '</dd>' +
+        '<dt>应用形态</dt><dd>' + (desk
+          ? 'Windows 桌面应用（原生窗口 + 独立进程 + 本地服务托管）'
+          : '网页端（浏览器访问本地服务，与桌面端共用同一套界面与接口）') + '</dd>' +
+        '<dt>界面技术</dt><dd>' + (desk ? 'WebView2 内核' : '浏览器内核') + ' + 单页应用外壳（左导航 / 多标签 / 顶部工具栏）</dd>' +
+        '<dt>后端</dt><dd>LiveTalking（Python 3 + aiohttp + WebRTC/wav2lip/edgetts）</dd>' +
+      '</div></div>' +
+      '<div class="card"><h3>' + svgIcon('user') + '账号与套餐</h3>' + (u ?
+        '<div class="kv"><dt>账号</dt><dd>' + esc(u.username) + (u.display_name ? '（' + esc(u.display_name) + '）' : '') + '</dd>' +
+        '<dt>角色</dt><dd>' + (u.is_admin ? '<span class="badge ok">管理员</span>' : '<span class="badge">普通用户</span>') + '</dd>' +
+        '<dt>套餐</dt><dd>' + esc(u.plan_label || u.plan || '免费版') + (u.plan_expires_at ? '（到期：' + esc(String(u.plan_expires_at).slice(0, 10)) + '）' : '') + '</dd>' +
+        '<dt>已解锁</dt><dd>' + esc(feats.length ? feats.join('、') : '（基础功能）') + '</dd></div>' +
+        '<div class="row" style="margin-top:12px"><button class="btn ghost" id="abUpgrade">' + svgIcon('zap') + '<span>查看套餐与升级</span></button>' +
+        '<button class="btn ghost" id="abLogout">' + svgIcon('power') + '<span>退出登录</span></button></div>'
+        : '<div class="hint">' + (MODE === 'live' ? '本机未开启登录，或当前未登录。' : '离线演示模式下没有账号信息。') + '</div>') +
+      '</div>' +
+      '<div class="card"><h3>' + svgIcon('cpu') + '运行环境</h3><div class="kv">' +
+        '<dt>操作系统</dt><dd>' + esc(APP_HOST.host_os || navigator.platform || '—') + '</dd>' +
+        /* Python / 项目根目录 / 日志目录 / 构建类型都只有桌面宿主才拿得到 */
+        (desk
+          ? '<dt>Python</dt><dd>' + esc(APP_HOST.python || '—') + '</dd>' +
+            '<dt>项目根目录</dt><dd style="user-select:text">' + esc(APP_HOST.project_root || '—') + '</dd>' +
+            '<dt>日志目录</dt><dd style="user-select:text">' + esc(APP_HOST.log_dir || '—') + '</dd>'
+          : '<dt>浏览器</dt><dd style="user-select:text">' + esc(navigator.userAgent) + '</dd>') +
+        '<dt>屏幕</dt><dd>' + window.screen.width + '×' + window.screen.height + '（窗口 ' + window.innerWidth + '×' + window.innerHeight + '）</dd>' +
+        (desk ? '<dt>构建类型</dt><dd>' + (APP_HOST.frozen ? '已打包 exe' : '源码运行') + '</dd>' : '') +
+      '</div></div>' +
+      '<div class="card"><h3>' + svgIcon('alert') + '合规与授权提示</h3><div class="hint">' +
+        '① 平台要求标注 AI 生成内容时请如实标注，并保留必要的标识；<br>' +
+        '② 不要使用未授权的真人肖像、声音、音乐、字体与商品素材；<br>' +
+        '③ 直播过程请保留真人值守，紧急停止与安全下播随时可用；<br>' +
+        '④ 本项目基于 LiveTalking 等开源组件，商用前请确认各自许可证。' +
+      '</div></div>' +
+      '<div class="card"><h3>' + svgIcon('keyboard') + '快捷键</h3><div class="row">' +
+        '<button class="btn ghost" id="abKeys">' + svgIcon('keyboard') + '<span>查看全部快捷键</span></button>' +
+        (desk ? '<button class="btn ghost" id="abFolder">' + svgIcon('folder') + '<span>打开项目文件夹</span></button>' : '') +
+      '</div></div>';
+
+    const cp = $('#abCopy', pane); if(cp) cp.addEventListener('click', () => copyText([
+      appName() + ' 诊断信息',
+      '时间：' + new Date().toLocaleString('zh-CN'),
+      '应用版本：' + APP_VERSION + (desk ? '（' + (APP_HOST.frozen ? 'exe' : '源码') + '）' : ''),
+      '运行端：' + (desk ? '桌面端' : '网页端（浏览器）'),
+      '运行模式：' + MODE,
+      '服务地址：' + (MODE === 'live' ? location.origin : '未连接')
+    ].concat(desk ? [
+      '服务托管：' + (APP_HOST.managed ? '本应用启动' : '外部启动'),
+      '界面内核：' + (APP_HOST.webview || navigator.userAgent),
+      '项目根目录：' + (APP_HOST.project_root || '—')
+    ] : []).concat([
+      '操作系统：' + (APP_HOST.host_os || navigator.platform),
+      '账号：' + (u ? u.username + ' / ' + (u.plan_label || u.plan) : '未登录'),
+      '直播状态：' + (ST ? (ST.live_state || '—') + ' / 输出' + (ST.output_connected ? '已连接' : '未连接') : '—')
+    ]).join('\n'), '诊断信息'));
+    const up = $('#abUpgrade', pane); if(up) up.addEventListener('click', () => openExternal('/upgrade.html'));
+    const lo = $('#abLogout', pane); if(lo) lo.addEventListener('click', () => confirmBox('退出登录', '退出后回到登录页（不会停止数字人服务）。', () => { location.href = '/api/auth/logout'; }, true));
+    const dk = $('#abKeys', pane); if(dk) dk.addEventListener('click', showShortcuts);
+    const fd = $('#abFolder', pane); if(fd) fd.addEventListener('click', () => bridge('open_project_folder'));
+    const dd = $('#abDocs', pane); if(dd) dd.addEventListener('click', () => openModule('tutorial'));
+  }
+  draw();
+  return {refresh: draw};
+};
+
+/* ── 17.12 启动流程 ───────────────────────────────────────────────── */
+const APP_BOOT_AT = Date.now();
+function bootStep(text, pct){
+  const box = $('#bootSteps');
+  box.insertAdjacentHTML('beforeend', '<div><i>✓</i>' + esc(text) + '</div>');
+  $('#bootBar').style.width = pct + '%';
+}
+function bootFail(text){ $('#bootSteps').insertAdjacentHTML('beforeend', '<div style="color:#ffb4b4">✗ ' + esc(text) + '</div>'); }
+
+async function boot(){
+  applyEndChrome();   /* 标题 / 品牌小字 / 工具栏按钮按端区分 */
+  bootStep('初始化应用外壳', 10);
+  applySettings();
+  if(S.navCollapsed && !narrowNav()) document.documentElement.dataset.nav = 'collapsed';
+  const nt = $('#navToggle'); if(nt) nt.setAttribute('aria-expanded', String(!S.navCollapsed));
+  bindShell(); bindShortcuts(); bindAppGlobals(); renderNav(''); renderAccount(); syncTabbar();
+  $('#app').hidden = false;
+
+  if(canServe && FORCE !== 'demo'){
+    $('#bootSub').textContent = '正在连接本地服务…';
+    try{
+      /* 必须先切到 live 再调 Data.*，否则会走离线演示分支 */
+      MODE = 'live';
+      bootStep('连接本地服务 ' + location.host, 32);
+      ACCOUNT = await Promise.race([apiGet('/api/auth/me'), new Promise((_, rej) => setTimeout(() => rej(new Error('账号接口超时')), 6000))]);
+      bootStep('读取运行状态（GET /api/live/status）', 62);
+      ST = await Data.status();
+      bootStep('服务已连接：输出' + (ST && ST.output_connected ? '已连接' : '未连接') + '，直播状态 ' + ((ST && ST.live_state) || '—'), 84);
+      PROVIDERS = [];
+    }catch(e){
+      MODE = 'demo';
+      bootFail('未能连接本地服务（' + ((e && e.message) || e) + '），已降级为离线演示模式');
+    }
+  }else{
+    bootStep('以 file:// 打开或强制演示模式 → 离线演示', 60);
+    MODE = 'demo';
+  }
+
+  if(!ST){ try{ ST = await Data.status(); }catch(e){ ST = null; } }
+  updateModeChip(); renderStatusBar(ST); renderAccount(); renderNav('');
+  startPolling();
+  hostReady();
+
+  bootStep('构建导航与标签页', 100);
+  $('#bootSub').textContent = MODE === 'live' ? '服务已就绪' : '离线演示模式';
+  setTimeout(() => {
+    const bootEl = $('#boot');
+    if(bootEl){ bootEl.classList.add('hide'); setTimeout(() => bootEl.remove(), 340); }
+
+    const want = params.get('open');
+    const restore = (S.autoOpenLast && Array.isArray(S.tabs)) ? S.tabs.filter(id => APP_MAP[id]) : [];
+    const openList = want && APP_MAP[want] ? [want].concat(restore.filter(id => id !== want)) : (restore.length ? restore : ['control']);
+    openList.forEach(id => openModule(id));
+    if(S.activeTab && WM.wins.has(S.activeTab)) activateTab(S.activeTab);
+    if(!WM.wins.size) showWelcome();
+
+    if(MODE === 'live'){
+      if(ACCOUNT && ACCOUNT.auth_enabled && ACCOUNT.authenticated === false){
+        modal({title: '需要登录', icon: 'lock', body: '<p>当前未登录，部分模块会被服务端拦截。</p><p class="hint">登录后本页会自动恢复。</p>',
+          buttons: [{text: '稍后', action: closeModal}, {text: '去登录', primary: true, action: () => { location.href = '/login.html?next=' + encodeURIComponent('/app.html'); }}]});
+      }else{
+        notify('ok', '已就绪', '服务 ' + location.host);
+      }
+    }else{
+      /* 离线演示这件事在标题栏徽标、面板顶部的黄条、左下角说明里已经讲了三遍，
+         再弹一条 8 秒的提示条只会白盖住右下角的卡片，所以只进通知中心、不弹条。 */
+      notify('warn', '离线演示模式', '未连接本地服务，界面数据为演示数据；启动服务后从 8010 端口打开即为完整功能。', true);
+    }
+    console.log('[app] 启动完成，用时 ' + (Date.now() - APP_BOOT_AT) + 'ms，模式 ' + MODE);
+  }, MODE === 'live' ? 260 : 460);
+}
+boot().catch(e => { bootFail('启动失败：' + ((e && e.message) || e)); console.error(e); });
+</script>
+</body>
+</html>

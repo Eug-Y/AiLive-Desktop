@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI 达人带货直播完整教程 - LiveTalking</title>
+  <link rel="stylesheet" href="common.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* 本页只补充 v3 未覆盖的阅读型结构；颜色、圆角、间距一律沿用 common.css 的变量 */
+    html{scroll-behavior:smooth;scroll-padding-top:74px}
+
+    /* 首屏横幅：与导航同一套品牌渐变 */
+    .tutorial-hero{background:linear-gradient(120deg,#1e293b 0%,#312e81 52%,#6d28d9 100%);color:#fff;padding:var(--space-8) var(--space-5) var(--space-6)}
+    .tutorial-hero-inner{max-width:1120px;margin:0 auto}
+    .eyebrow{margin:0 0 var(--space-2);color:#a5b4fc;font-size:12.5px;font-weight:700;letter-spacing:.08em}
+    .tutorial-hero .page-heading{margin:0 0 var(--space-2)}
+    .tutorial-hero .page-title{font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff}
+    .hero-lead{max-width:72ch;margin:0;color:#cbd5e1;font-size:15px;line-height:1.75}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-5)}
+    /* 深色横幅上把主按钮反白，保证对比度；全页仅此一个 btn-primary。
+       文字色用固定的 indigo-700 而不是 var(--primary-darker)：横幅底色是恒定的深色渐变，
+       而 --primary-darker 在深色主题下会变成浅紫 #a5b4fc，白底上只有 1.99:1。 */
+    .tutorial-hero .btn-primary{background:#fff;color:#4338ca;border-color:#fff;box-shadow:var(--shadow-sm)}
+    .tutorial-hero .btn-primary:hover:not(:disabled){background:#eef2ff;color:#3730a3;box-shadow:var(--shadow-md)}
+    .tutorial-hero .btn-outline{background:transparent;border-color:rgba(255,255,255,.55);color:#fff}
+    .tutorial-hero .btn-outline:hover:not(:disabled){background:rgba(255,255,255,.16);border-color:#fff;color:#fff}
+
+    /* 目录 + 正文两栏 */
+    .layout{max-width:1120px;margin:var(--space-6) auto var(--space-8);padding:0 var(--space-4);display:grid;grid-template-columns:250px minmax(0,1fr);gap:var(--space-5);align-items:start}
+    .toc{position:sticky;top:74px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:var(--space-4)}
+    .toc-title{display:block;font-size:11.5px;font-weight:650;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--space-2)}
+    .toc-links{display:flex;flex-direction:column;gap:1px}
+    .toc-links a{display:block;padding:6px 9px;border-left:2px solid transparent;border-radius:var(--radius-xs);color:var(--text-secondary);font-size:13.5px;text-decoration:none}
+    .toc-links a:hover{background:var(--surface-sunken);color:var(--primary)}
+    .toc-links a.active{background:var(--primary-light);border-left-color:var(--primary);color:var(--primary-dark);font-weight:620}
+
+    /* 章节卡片 */
+    article{display:grid;gap:var(--space-4)}
+    article .card{margin-bottom:0}
+    .tutorial-section .card-body > *:last-child{margin-bottom:0}
+    .section-heading{margin:0 0 var(--space-3)}
+    .section-heading h2{margin:0}
+    .tutorial-section p{max-width:72ch;color:var(--text-secondary);line-height:1.8}
+    .tutorial-section h3{margin:var(--space-4) 0 var(--space-2);font-size:16px}
+    .tutorial-section h3 i{color:var(--primary);margin-right:5px}
+    .tutorial-section h3:first-child{margin-top:0}
+    .tutorial-section code{word-break:break-all}
+    .flow{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+
+    @media(max-width:992px){
+      .tutorial-hero{padding:var(--space-6) var(--space-3) var(--space-5)}
+      .tutorial-hero .page-title{font-size:24px}
+      .hero-lead{font-size:14.5px}
+      .layout{grid-template-columns:minmax(0,1fr);padding:0 var(--space-3);gap:var(--space-4);margin-top:var(--space-5)}
+      .toc{position:static}
+      .toc-links{flex-direction:row;overflow-x:auto;gap:var(--space-2);scrollbar-width:none}
+      .toc-links::-webkit-scrollbar{display:none}
+      .toc-links a{white-space:nowrap;border:1px solid var(--border);background:var(--surface-sunken)}
+      .toc-links a.active{border-color:var(--primary-border);background:var(--primary-light)}
+    }
+  </style>
+</head>
+<body>
+  <nav id="lt-nav-container"></nav>
+  <header class="tutorial-hero">
+    <div class="tutorial-hero-inner">
+      <p class="eyebrow">AI 带货直播操作指引</p>
+      <div class="page-heading">
+        <h1 class="page-title">AI 达人带货直播完整教程</h1>
+      </div>
+      <p class="hero-lead">适用于抖音、微信视频号等官方直播工具的窗口采集流程 · 人工值守版</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/live_console.html"><i class="bi bi-broadcast-pin"></i>返回直播工作台</a>
+        <a class="btn btn-outline" href="/llm.html"><i class="bi bi-cpu"></i>大模型管理</a>
+        <a class="btn btn-outline" href="/subtitle.html"><i class="bi bi-badge-cc"></i>字幕 OCR</a>
+        <button class="btn btn-outline" type="button" onclick="window.print()"><i class="bi bi-printer"></i>打印教程</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="教程目录">
+      <b class="toc-title">目录</b>
+      <div class="toc-links">
+        <a href="#overview">1. 盈利与系统路径</a>
+        <a href="#once">2. 首次准备</a>
+        <a href="#product">3. 选品录入</a>
+        <a href="#script">4. 生成讲品话术</a>
+        <a href="#preflight">5. 开播检查</a>
+        <a href="#platform">6. 平台采集</a>
+        <a href="#live">7. 直播中操作</a>
+        <a href="#switch">8. 安全换品</a>
+        <a href="#emergency">9. 应急处置</a>
+        <a href="#after">10. 下播复盘</a>
+        <a href="#backup">11. 备份</a>
+        <a href="#trouble">12. 故障排查</a>
+        <a href="#compliance">13. 合规红线</a>
+        <a href="#offline">14. 断网保命</a>
+      </div>
+    </nav>
+
+    <article>
+      <section class="card tutorial-section" id="overview">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-signpost-split"></i><h2>1. 盈利与系统路径</h2></div>
+          <div class="flow">
+            <div class="flow-step"><span class="step-no">01</span><span class="step-title">达人联盟选品</span></div>
+            <div class="flow-step"><span class="step-no">02</span><span class="step-title">平台挂商品卡</span></div>
+            <div class="flow-step"><span class="step-no">03</span><span class="step-title">AI 数字人讲解</span></div>
+            <div class="flow-step"><span class="step-no">04</span><span class="step-title">观众下单成交</span></div>
+            <div class="flow-step"><span class="step-no">05</span><span class="step-title">平台结算佣金</span></div>
+          </div>
+          <p>本系统负责数字人画面、语音合成（TTS）、商品话术、评论字幕识别和智能答疑；平台账号、选品、挂车、订单、退款与佣金结算仍由平台官方系统负责。</p>
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <div class="alert-body"><div class="alert-title">收益提示</div>佣金不是保证收益。计算净收益时还要考虑退货、样品、投流、人工值守和账号运营成本。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="once">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-tools"></i><h2>2. 首次准备（只做一次）</h2></div>
+          <div class="checklist">
+            <div class="check-item"><i class="bi bi-1-circle"></i><span>完成达人实名认证，并确认直播、带货和对应类目权限。</span></div>
+            <div class="check-item"><i class="bi bi-2-circle"></i><span>从平台官方渠道安装抖音直播伴侣或视频号直播工具。</span></div>
+            <div class="check-item"><i class="bi bi-3-circle"></i><span>双击 <code>E:\AiLive\一键启动AI数字人.cmd</code>，等待工作台打开。</span></div>
+            <div class="check-item"><i class="bi bi-4-circle"></i><span>进入“大模型管理”，选择 DeepSeek、通义千问或自定义兼容模型；接口密钥（API Key）只在本机页面填写，不要发到聊天。</span></div>
+            <div class="check-item"><i class="bi bi-5-circle"></i><span>用模型测试按钮确认回答正常。</span></div>
+            <div class="check-item"><i class="bi bi-6-circle"></i><span>准备已获得授权的数字人肖像、声音、商品图片、视频和音乐。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="product">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-upc-scan"></i><h2>3. 每件商品的选品与录入</h2></div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead><tr><th>字段</th><th>怎么填</th><th>注意事项</th></tr></thead>
+              <tbody>
+                <tr><td>平台商品 ID</td><td>复制商品卡/选品中心中的准确 ID</td><td>用于防止挂错品</td></tr>
+                <tr><td>价格与优惠</td><td>写明当前到手信息和领券方式</td><td>变价后必须重新核对</td></tr>
+                <tr><td>卖点</td><td>每行一条，只写商品卡或商家确认的信息</td><td>不编造功效、销量和体验</td></tr>
+                <tr><td>适用人群/用法</td><td>以说明书和商品参数为准</td><td>不做诊断或个体效果承诺</td></tr>
+                <tr><td>佣金</td><td>后台记录佣金率和预估单佣</td><td>不会传给模型或口播</td></tr>
+                <tr><td>商品禁用词</td><td>一行一个，加入该商品特别容易违规的说法</td><td>与内置合规规则叠加</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="checklist mt-3">
+            <div class="check-item"><i class="bi bi-1-circle"></i><span>先保存草稿。</span></div>
+            <div class="check-item"><i class="bi bi-2-circle"></i><span>逐项对照平台商品卡。</span></div>
+            <div class="check-item"><i class="bi bi-3-circle"></i><span>确认素材推广授权。</span></div>
+            <div class="check-item"><i class="bi bi-4-circle"></i><span>最后勾选“信息已核对”和“素材已授权”。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="script">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-magic"></i><h2>4. 生成并审核讲品话术</h2></div>
+          <div class="checklist">
+            <div class="check-item"><i class="bi bi-1-circle"></i><span>在商品列表点击“设为当前商品”。</span></div>
+            <div class="check-item"><i class="bi bi-2-circle"></i><span>点击“生成并应用话术”。</span></div>
+            <div class="check-item"><i class="bi bi-3-circle"></i><span>逐条人工阅读自动话术，确认商品名称、价格、优惠和卖点准确。</span></div>
+            <div class="check-item"><i class="bi bi-4-circle"></i><span>需要修改时直接编辑“自动直播话术”，保存后必须重新彩排。</span></div>
+            <div class="check-item"><i class="bi bi-5-circle"></i><span>不要把佣金、内部选品理由或商家私下承诺写入口播。</span></div>
+          </div>
+          <div class="alert alert-success mt-2">
+            <i class="bi bi-shield-check"></i>
+            <div class="alert-body"><div class="alert-title">安全机制</div>系统切换商品、修改当前商品或重新保存话术时，会自动撤销相关检查项，防止沿用旧商品话术。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="preflight">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-clipboard-check"></i><h2>5. 开播前检查中心</h2></div>
+          <p>按照工作台“开播 SOP 检查中心”处理红色阻塞项。准备度达到 100% 只代表本系统检查通过，仍要在平台端完成最终确认。</p>
+          <div class="checklist">
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>达人带货、直播和类目权限正常</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>当前商品与平台商品卡完全一致</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>商品已挂到直播间</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>数字人输出已连接</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>画面保留 AI 数字人标识</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>自动话术已生成并人工复核</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>声音、口型和平台音频电平正常</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>至少完成 1 分钟彩排</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>真人值守人员已就位</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="platform">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-window-stack"></i><h2>6. 抖音 / 视频号官方工具配置</h2></div>
+          <div class="checklist">
+            <div class="check-item"><i class="bi bi-1-circle"></i><span>新建竖屏画布，建议 1080×1920，帧率 25 或 30。</span></div>
+            <div class="check-item"><i class="bi bi-2-circle"></i><span>工作台点击“打开 9:16 直播输出窗口”，再在输出窗口点击“启动直播画面”。</span></div>
+            <div class="check-item"><i class="bi bi-3-circle"></i><span>官方直播工具添加“窗口采集”，只选择“AI 数字人直播输出”。</span></div>
+            <div class="check-item"><i class="bi bi-4-circle"></i><span>开启系统音频或应用音频采集，确认数字人说话时电平跳动。</span></div>
+            <div class="check-item"><i class="bi bi-5-circle"></i><span>挂载与工作台当前商品相同的商品卡。</span></div>
+            <div class="check-item"><i class="bi bi-6-circle"></i><span>先做私密/低可见测试，再公开开播。</span></div>
+          </div>
+          <div class="alert alert-danger mt-2">
+            <i class="bi bi-shield-exclamation"></i>
+            <div class="alert-body"><div class="alert-title">画面安全</div>不要采集控制台窗口，不要把接口密钥、佣金、后台订单或观众隐私显示在直播画面里。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="live">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-broadcast"></i><h2>7. 直播中的标准操作</h2></div>
+          <h3><i class="bi bi-play-circle"></i>自动讲品</h3>
+          <p>点击“启动自动话术”。OCR 正在回答时，自动话术会暂时让路。</p>
+          <h3><i class="bi bi-mic"></i>人工插话</h3>
+          <p>紧急说明、纠错或平台活动信息使用“直接播报”；观众商品问题使用“大模型回答”，回答会绑定当前商品资料。</p>
+          <h3><i class="bi bi-badge-cc"></i>字幕/评论识别</h3>
+          <div class="flow">
+            <div class="flow-step"><span class="step-no">01</span><span class="step-title">打开字幕 OCR 页面并截屏</span></div>
+            <div class="flow-step"><span class="step-no">02</span><span class="step-title">只框选平台评论或字幕区域，不能框选数字人自己的字幕</span></div>
+            <div class="flow-step"><span class="step-no">03</span><span class="step-title">观察几轮后再开启自动回应</span></div>
+          </div>
+          <h3><i class="bi bi-eye"></i>人工值守</h3>
+          <p>持续观察平台警告、商品状态、库存/价格变化、重复回答和音画异常。</p>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="switch">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-arrow-repeat"></i><h2>8. 安全换品顺序</h2></div>
+          <div class="checklist">
+            <div class="check-item"><i class="bi bi-1-circle"></i><span>暂停自动话术。</span></div>
+            <div class="check-item"><i class="bi bi-2-circle"></i><span>在平台直播工具中准备下一件商品卡，但先不要让数字人讲。</span></div>
+            <div class="check-item"><i class="bi bi-3-circle"></i><span>工作台点击“切换下一件可用商品”或指定“设为当前商品”。</span></div>
+            <div class="check-item"><i class="bi bi-4-circle"></i><span>生成并人工检查新商品话术。</span></div>
+            <div class="check-item"><i class="bi bi-5-circle"></i><span>确认平台挂载商品与工作台当前商品一致。</span></div>
+            <div class="check-item"><i class="bi bi-6-circle"></i><span>重新勾选商品匹配、挂品和彩排检查。</span></div>
+            <div class="check-item"><i class="bi bi-7-circle"></i><span>恢复自动话术。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="emergency">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-exclamation-octagon"></i><h2>9. 应急处置</h2></div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead><tr><th>情况</th><th>立即操作</th></tr></thead>
+              <tbody>
+                <tr><td>说错价格/商品</td><td>点击“紧急停止自动内容”→ 平台下架错误商品卡 → 人工纠正</td></tr>
+                <tr><td>重复回答/自问自答</td><td>紧急停止 → 停止 OCR → 重新框选评论区域</td></tr>
+                <tr><td>模型出现违规内容</td><td>人工打断 → 暂停智能回答 → 保存记录并修正商品禁用词</td></tr>
+                <tr><td>无声音/黑屏</td><td>暂停自动内容 → 检查输出窗口与平台采集源 → 必要时结束平台直播</td></tr>
+                <tr><td>平台警告</td><td>立即停止相关内容，按平台提示整改；不要尝试规避审核</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="after">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-graph-up-arrow"></i><h2>10. 下播后的复盘</h2></div>
+          <div class="checklist">
+            <div class="check-item"><i class="bi bi-1-circle"></i><span>先在平台端结束直播，再停止自动话术和 OCR。</span></div>
+            <div class="check-item"><i class="bi bi-2-circle"></i><span>双击 <code>E:\AiLive\停止AI直播服务.cmd</code>。</span></div>
+            <div class="check-item"><i class="bi bi-3-circle"></i><span>记录每件商品的曝光、点击、成交、退款、佣金和问题类型。</span></div>
+            <div class="check-item"><i class="bi bi-4-circle"></i><span>标记高频问题，补充到商品资料；不确定的信息交给商家确认。</span></div>
+            <div class="check-item"><i class="bi bi-5-circle"></i><span>删除失效优惠和停推商品。</span></div>
+            <div class="check-item"><i class="bi bi-6-circle"></i><span>计算：预估净佣金 = 结算佣金 − 退款扣回 − 投流 − 样品/素材 − 人工成本。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="backup">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-download"></i><h2>11. 配置备份</h2></div>
+          <p>在检查中心点击“备份运营配置”，会下载包含商品库、佣金、设置、话术和检查项的 JSON 文件。</p>
+          <div class="checklist">
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>备份不包含任何大模型接口密钥。</span></div>
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>备份含内部佣金，请保存在受控目录，不要发到直播群或公开网盘。</span></div>
+            <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>建议每次大批量换品后备份一次。</span></div>
+            <div class="check-item bad"><i class="bi bi-x-octagon-fill"></i><span><code>.env</code> 含模型密钥，不能上传、截图或分享。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="trouble">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-wrench-adjustable"></i><h2>12. 常见故障</h2></div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead><tr><th>现象</th><th>处理</th></tr></thead>
+              <tbody>
+                <tr><td>8010 页面打不开</td><td>重新双击启动脚本，检查 <code>server.live.stderr.log</code></td></tr>
+                <tr><td>输出窗口无声音</td><td>先点击“启动直播画面”；检查浏览器音量和平台应用音频采集</td></tr>
+                <tr><td>数字人不说话</td><td>确认输出已连接、语音合成网络可用、话术未被合规拦截</td></tr>
+                <tr><td>模型不回答</td><td>检查接口密钥、模型连接测试和当前商品资料</td></tr>
+                <tr><td>OCR 一直重复</td><td>缩小识别区域，避开数字人回答字幕，提高冷却时间</td></tr>
+                <tr><td>换品后没有话术</td><td>这是安全机制；为新商品重新点击“生成并应用话术”</td></tr>
+                <tr><td>准备度下降</td><td>改商品、话术或画面后需要重新核对和彩排</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="compliance">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-shield-exclamation"></i><h2>13. 合规红线</h2></div>
+          <div class="checklist">
+            <div class="check-item bad"><i class="bi bi-x-octagon-fill"></i><span>不得虚构价格、库存、销量、用户评价、认证、赠品或售后。</span></div>
+            <div class="check-item bad"><i class="bi bi-x-octagon-fill"></i><span>不得承诺全网最低、百分百有效、根治、无副作用、稳赚等结果。</span></div>
+            <div class="check-item bad"><i class="bi bi-x-octagon-fill"></i><span>不得使用未经授权的人脸、声音、音乐和商家素材。</span></div>
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>必须保留 AI 标识并安排真人值守。</span></div>
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>健康、食品、美妆、金融等敏感类目必须按平台与法律要求补充资质和风险提示。</span></div>
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>最终以开播当日平台规则和商品卡实时信息为准。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tutorial-section" id="offline">
+        <div class="card-body">
+          <div class="section-heading"><i class="bi bi-wifi-off"></i><h2>14. 断网保命（离线语音缓存）</h2></div>
+          <p>高频问题（价格、规格、发货、售后等）先由意图直答秒回，不调用大模型。把这些话术提前合成到本地语音缓存后，<b>断网也能播，而且接近零延迟</b>。</p>
+          <div class="checklist">
+            <div class="check-item"><i class="bi bi-1-circle"></i><span>联网状态下执行 <code>E:\AiLive\env\python.exe E:\AiLive\tools\prewarm_tts_cache.py</code>。</span></div>
+            <div class="check-item"><i class="bi bi-2-circle"></i><span>看到“新建 0 条 / 命中已有全部 / 失败 0 条”即预热完成。</span></div>
+            <div class="check-item"><i class="bi bi-3-circle"></i><span>回到工作台“开播 SOP 检查中心”，确认“离线语音缓存已覆盖高频话术”显示已覆盖。</span></div>
+          </div>
+          <div class="checklist mt-3">
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>新增商品、修改价格或话术后，话术清单会变化，必须重新预热。</span></div>
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>预热和播放使用同一音色（<code>config.yaml</code> 的 <code>REF_FILE</code>），换音色后要重新预热。</span></div>
+            <div class="check-item warn"><i class="bi bi-exclamation-triangle-fill"></i><span>没预热的新话术仍可播，但需联网合成；断网时会失败并交给人工处理。</span></div>
+          </div>
+        </div>
+      </section>
+    </article>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    LT.Nav.current = 'affiliate';
+    LT.Nav.inject('#lt-nav-container');
+
+    /* 目录滚动高亮：纯阅读辅助，失败也不影响正文 */
+    (function initTocSpy() {
+      const links = Array.from(document.querySelectorAll('.toc-links a[href^="#"]'));
+      if (!links.length || typeof IntersectionObserver !== 'function') return;
+      const sections = links
+        .map((link) => document.getElementById(link.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+
+      const activate = (id) => {
+        links.forEach((link) => {
+          link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+        });
+      };
+
+      try {
+        const observer = new IntersectionObserver((entries) => {
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          if (visible.length) activate(visible[0].target.id);
+        }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
+        sections.forEach((section) => observer.observe(section));
+        activate(sections[0].id);
+      } catch (error) {
+        /* 忽略：目录高亮只是辅助 */
+      }
+    })();
+  </script>
+</body>
+</html>

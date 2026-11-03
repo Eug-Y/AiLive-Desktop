@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字人驱动 - LiveTalking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 两栏：左「实时连接」+ 右「文本/音频驱动」，顶部对齐不让卡片被拉伸 */
+        .main-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+            gap: var(--space-5);
+            align-items: start;
+        }
+        @media (max-width: 992px) {
+            .main-layout { grid-template-columns: minmax(0, 1fr); }
+        }
+
+        /* 数字人画面 */
+        #videoPlaceholder, video {
+            width: 100%;
+            min-height: 320px;
+            border-radius: var(--radius-sm);
+        }
+        video { background: #000; }
+        #videoPlaceholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111827;
+            color: #94a3b8;
+        }
+        #videoPlaceholder i { font-size: 48px; opacity: 0.5; }
+
+        /* 参数行：按内容长度分配列宽，避免长文案被挤、短内容留富余 */
+        .param-row {
+            display: grid;
+            grid-template-columns: 1.1fr 1fr 1.2fr;
+            gap: var(--space-3);
+        }
+        .param-row .form-group { margin-bottom: 0; }
+        @media (max-width: 768px) {
+            .param-row { grid-template-columns: minmax(0, 1fr); }
+            #videoPlaceholder, video { min-height: 220px; }
+        }
+
+        /* 驱动操作行：同一行内控件高度统一（38px），不再混用 btn-sm */
+        .driver-actions {
+            display: flex;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .driver-actions .form-select {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 132px;
+        }
+        .text-driver textarea { min-height: 72px; }
+
+        /* 动作编号只填一个数字，不占满整行 */
+        .action-index {
+            flex: 0 0 140px;
+            max-width: 140px;
+        }
+        @media (max-width: 480px) {
+            .action-index { flex: 1 1 100%; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+<nav id="lt-nav-container"></nav>
+
+<main class="container">
+    <div class="page-heading">
+        <h1 class="page-title"><i class="bi bi-camera-video"></i> 数字人驱动</h1>
+        <p class="page-subtitle">建立实时连接后，可用文本、音频或动作驱动数字人</p>
+    </div>
+
+    <div class="main-layout">
+        <section class="card-fill-reset">
+            <div class="glass-card">
+                <div class="card-header">
+                    <i class="bi bi-broadcast"></i> 实时连接（WebRTC）
+                    <span id="connectionBadge" class="status-badge offline ms-auto">
+                        <span class="status-dot off"></span> 未连接
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="param-row mb-3">
+                        <div class="form-group">
+                            <label class="form-label" for="offerAvatar">数字人形象 ID</label>
+                            <input type="text" class="form-control" id="offerAvatar"
+                                   placeholder="wav2lip256_avatar1" value="wav2lip256_avatar1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="offerRefAudio">音色</label>
+                            <input type="text" class="form-control" id="offerRefAudio"
+                                   placeholder="zh-CN-XiaoxiaoNeural">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="offerRefText">口型参考文本</label>
+                            <input type="text" class="form-control" id="offerRefText"
+                                   placeholder="口型参考文本（可选）">
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary" id="btnConnect" type="button">
+                            <i class="bi bi-play-fill"></i> 连接
+                        </button>
+                        <button class="btn btn-danger" id="btnDisconnect" type="button" style="display:none;">
+                            <i class="bi bi-stop-fill"></i> 断开
+                        </button>
+                        <button class="btn btn-outline" id="btnCheckSpeak" type="button" disabled
+                                title="查看当前说话状态">
+                            <i class="bi bi-info-circle"></i> 说话状态
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <div id="videoPlaceholder">
+                            <div class="text-center">
+                                <i class="bi bi-camera-video-off d-block mb-2"></i>
+                                <span>连接后开始数字人驱动</span>
+                            </div>
+                        </div>
+                        <video id="video" autoplay playsinline muted controls style="display:none;"></video>
+                        <audio id="audio" autoplay style="display:none;"></audio>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card-fill-reset">
+            <div class="glass-card text-driver">
+                <div class="card-header">
+                    <i class="bi bi-chat-text-fill"></i> 文本驱动
+                    <div class="card-actions chip-group" id="quickTemplates">
+                        <button class="chip" type="button"
+                                data-text="大家好，欢迎来到直播间。">欢迎语</button>
+                        <button class="chip" type="button"
+                                data-text="感谢大家的关注与支持。">感谢关注</button>
+                        <button class="chip" type="button"
+                                data-text="今天给大家介绍一款好用的产品。">产品介绍</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="txtMessage">播报文本</label>
+                        <textarea class="form-control no-resize" id="txtMessage" rows="2" maxlength="2000"
+                                  placeholder="输入要让数字人播报的文本…">大家好，欢迎来到直播间。</textarea>
+                    </div>
+                    <div class="driver-actions">
+                        <select class="form-select" id="txtType" aria-label="驱动模式">
+                            <option value="echo">直接播报</option>
+                            <option value="chat">大模型对话</option>
+                        </select>
+                        <label class="form-check" for="txtInterrupt">
+                            <input type="checkbox" id="txtInterrupt" checked>
+                            <span>打断当前播报</span>
+                        </label>
+                        <button class="btn btn-outline" id="btnSendText" type="button">
+                            <i class="bi bi-send"></i> 发送
+                        </button>
+                        <button class="btn btn-outline" id="btnInterrupt" type="button">
+                            <i class="bi bi-stop-circle"></i> 打断
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <div class="card-header"><i class="bi bi-mic-fill"></i> 音频驱动</div>
+                <div class="card-body">
+                    <div class="drop-zone mb-2" id="audioDropZone">
+                        <i class="bi bi-cloud-upload"></i>
+                        <span>把音频文件拖到这里，或点击选择文件</span>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <label class="form-file flex-1" for="audioFile">
+                            <input type="file" id="audioFile" accept="audio/*">
+                            <span class="file-name is-empty" id="audioFileName">未选择文件</span>
+                            <span class="file-btn"><i class="bi bi-folder2-open"></i> 选择文件</span>
+                        </label>
+                        <button class="btn btn-outline" id="btnUploadAudio" type="button">
+                            <i class="bi bi-upload"></i> 上传并播放
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 录制 + 动作驱动：两张矮卡片合并为一张卡片内的两个 panel，消除死白 -->
+    <div class="glass-card">
+        <div class="card-header"><i class="bi bi-record-circle"></i> 录制与动作驱动</div>
+        <div class="card-body">
+            <div class="grid-2">
+                <div class="panel">
+                    <div class="panel-title"><i class="bi bi-record-circle"></i> 录制</div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline" id="btnRecToggle" type="button">
+                            <i class="bi bi-record-circle"></i> 开始录制
+                        </button>
+                        <button class="btn btn-outline" id="btnDownload" type="button" disabled>
+                            <i class="bi bi-download"></i> 下载录像
+                        </button>
+                    </div>
+                    <p class="fs-xs text-muted mt-1 mb-0">停止录制后即可下载录像文件。</p>
+                </div>
+                <div class="panel">
+                    <div class="panel-title"><i class="bi bi-sliders"></i> 动作驱动</div>
+                    <div class="d-flex gap-2 align-items-end flex-wrap">
+                        <div class="form-group mb-0 action-index">
+                            <label class="form-label" for="audiotypeVal">动作编号</label>
+                            <input type="number" class="form-control" id="audiotypeVal" value="2" min="2">
+                        </div>
+                        <button class="btn btn-outline" id="btnAudiotype" type="button">
+                            <i class="bi bi-arrow-right-circle"></i> 切换
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="common.js"></script>
+<script>
+LT.Nav.current = 'index';
+LT.Nav.inject('#lt-nav-container');
+
+let pc = null;
+let sessionid = null;
+let selectedAudioFile = null;
+let recording = false;
+
+const $ = id => document.getElementById(id);
+const FILE_EMPTY_TEXT = '未选择文件';
+const MSG_CONNECT_FIRST = '请先建立连接';
+
+function showVideo(show) {
+    $('videoPlaceholder').style.display = show ? 'none' : 'flex';
+    $('video').style.display = show ? 'block' : 'none';
+    $('audio').style.display = show ? 'block' : 'none';
+}
+
+function updateConnectionUI(connected) {
+    const badge = $('connectionBadge');
+    badge.className = connected
+        ? 'status-badge online ms-auto'
+        : 'status-badge offline ms-auto';
+    badge.innerHTML = connected
+        ? '<span class="status-dot on"></span> 已连接'
+        : '<span class="status-dot off"></span> 未连接';
+    LT.Nav.updateStatus(connected);
+    $('btnCheckSpeak').disabled = !connected;
+}
+
+function negotiate() {
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+    return pc.createOffer()
+        .then(offer => pc.setLocalDescription(offer))
+        .then(() => new Promise(resolve => {
+            if (pc.iceGatheringState === 'complete') {
+                resolve();
+                return;
+            }
+            const check = () => {
+                if (pc.iceGatheringState === 'complete') {
+                    pc.removeEventListener('icegatheringstatechange', check);
+                    resolve();
+                }
+            };
+            pc.addEventListener('icegatheringstatechange', check);
+        }))
+        .then(() => LT.Api.post('/offer', {
+            sdp: pc.localDescription.sdp,
+            type: pc.localDescription.type,
+            avatar: $('offerAvatar').value || undefined,
+            refaudio: $('offerRefAudio').value || undefined,
+            reftext: $('offerRefText').value || undefined,
+        }, { showError: false }))
+        .then(answer => {
+            if (!answer.sdp) throw new Error('服务端未返回应答数据');
+            if (answer.sessionid) {
+                sessionid = answer.sessionid;
+                LT.Nav.updateSessionId(sessionid);
+            }
+            return pc.setRemoteDescription(new RTCSessionDescription({
+                type: 'answer',
+                sdp: answer.sdp,
+            }));
+        });
+}
+
+function start() {
+    LT.Loading.button('#btnConnect', true);
+    pc = new RTCPeerConnection({ sdpSemantics: 'unified-plan' });
+    pc.addEventListener('track', event => {
+        showVideo(true);
+        if (event.track.kind === 'video') {
+            $('video').srcObject = event.streams[0];
+        } else {
+            $('audio').srcObject = event.streams[0];
+        }
+    });
+    pc.addEventListener('connectionstatechange', () => {
+        const state = pc.connectionState;
+        if (state === 'connected') {
+            updateConnectionUI(true);
+            LT.Toast.success('已连接', '数字人会话已建立');
+            LT.Reconnect.reset();
+            LT.Sync.broadcastStatus(true, sessionid);
+            LT.ConnMonitor.watch(pc);
+        } else if (state === 'disconnected' || state === 'failed') {
+            updateConnectionUI(false);
+            LT.Sync.broadcastStatus(false, null);
+            LT.ConnMonitor.stop();
+            if (state === 'failed') {
+                LT.Reconnect.start(() => {
+                    stop();
+                    start();
+                    return Promise.resolve(true);
+                }, { maxAttempts: 5, baseDelay: 2000 });
+            }
+        }
+    });
+    negotiate()
+        .catch(error => {
+            LT.Toast.error('连接失败', error.message);
+            stop();
+        })
+        .finally(() => LT.Loading.button('#btnConnect', false));
+    $('btnConnect').style.display = 'none';
+    $('btnDisconnect').style.display = 'inline-flex';
+}
+
+function stop() {
+    LT.Reconnect.stop();
+    LT.ConnMonitor.stop();
+    if (pc) {
+        pc.close();
+        pc = null;
+    }
+    updateConnectionUI(false);
+    sessionid = null;
+    LT.Nav.updateSessionId(null);
+    LT.Sync.broadcastStatus(false, null);
+    $('btnConnect').style.display = 'inline-flex';
+    $('btnDisconnect').style.display = 'none';
+    $('video').srcObject = null;
+    $('audio').srcObject = null;
+    showVideo(false);
+}
+
+function sendText() {
+    const text = $('txtMessage').value.trim();
+    if (!text) return LT.Toast.warning('请先输入要播报的文本');
+    if (!sessionid) return LT.Toast.warning(MSG_CONNECT_FIRST);
+    const type = $('txtType').value;
+    const interrupt = $('txtInterrupt').checked;
+    LT.Api.post('/human', {
+        text,
+        type,
+        interrupt,
+        sessionid: String(sessionid),
+    }).then(() => {
+        $('txtMessage').value = '';
+        if (type === 'chat') {
+            LT.Toast.info('已发送', '正在等待模型回复');
+        } else {
+            LT.Toast.success('已发送', '数字人正在播报');
+        }
+    });
+}
+
+function uploadAudio() {
+    const file = selectedAudioFile || $('audioFile').files[0];
+    if (!file) return LT.Toast.warning('请先选择音频文件');
+    if (!sessionid) return LT.Toast.warning(MSG_CONNECT_FIRST);
+    LT.Api.upload('/humanaudio', file, { sessionid: String(sessionid) })
+        .then(() => LT.Toast.success('上传成功', '已开始播放音频'));
+}
+
+function interrupt() {
+    if (!sessionid) return LT.Toast.warning(MSG_CONNECT_FIRST);
+    LT.Api.post('/interrupt_talk', { sessionid: String(sessionid) })
+        .then(() => LT.Toast.info('已打断', '当前播报已停止'));
+}
+
+function checkSpeaking() {
+    if (!sessionid) return LT.Toast.warning(MSG_CONNECT_FIRST);
+    LT.Api.post('/is_speaking', { sessionid: String(sessionid) })
+        .then(data => {
+            const speaking = data.data === true || data.data?.is_speaking === true;
+            LT.Toast.info(
+                '说话状态',
+                speaking ? '数字人正在说话' : '数字人当前空闲',
+            );
+        });
+}
+
+function toggleRecord() {
+    if (!sessionid) return LT.Toast.warning(MSG_CONNECT_FIRST);
+    const type = recording ? 'end_record' : 'start_record';
+    LT.Api.post('/record', { type, sessionid: String(sessionid) }).then(() => {
+        recording = !recording;
+        $('btnRecToggle').className = recording
+            ? 'btn btn-danger'
+            : 'btn btn-outline';
+        $('btnRecToggle').innerHTML = recording
+            ? '<i class="bi bi-stop-circle"></i> 停止录制'
+            : '<i class="bi bi-record-circle"></i> 开始录制';
+        $('btnDownload').disabled = recording;
+        LT.Toast.info(
+            recording ? '录制中' : '录制已停止',
+            recording ? '正在录制数字人画面' : '录像已可下载',
+        );
+    });
+}
+
+function downloadRecord() {
+    if (sessionid) window.open('/record/' + sessionid, '_blank');
+}
+
+function setAudiotype() {
+    if (!sessionid) return LT.Toast.warning(MSG_CONNECT_FIRST);
+    const value = parseInt($('audiotypeVal').value, 10) || 0;
+    LT.Api.post('/set_audiotype', {
+        audiotype: value,
+        sessionid: String(sessionid),
+    }).then(() => LT.Toast.success('已切换', `动作编号已设为 ${value}`));
+}
+
+const dropZone = $('audioDropZone');
+const audioInput = $('audioFile');
+const audioFileName = $('audioFileName');
+
+function setAudioFileName(file) {
+    if (file) {
+        audioFileName.textContent = file.name;
+        audioFileName.classList.remove('is-empty');
+        audioFileName.title = file.name;
+    } else {
+        audioFileName.textContent = FILE_EMPTY_TEXT;
+        audioFileName.classList.add('is-empty');
+        audioFileName.removeAttribute('title');
+    }
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+});
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropZone.classList.remove('dragover');
+    });
+});
+dropZone.addEventListener('drop', event => {
+    const file = event.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('audio/')) {
+        LT.Toast.warning('请拖入音频文件');
+        return;
+    }
+    audioInput.files = event.dataTransfer.files;
+    selectedAudioFile = file;
+    setAudioFileName(file);
+});
+dropZone.addEventListener('click', () => audioInput.click());
+audioInput.addEventListener('change', () => {
+    selectedAudioFile = audioInput.files[0] || null;
+    setAudioFileName(selectedAudioFile);
+});
+
+$('btnConnect').addEventListener('click', start);
+$('btnDisconnect').addEventListener('click', stop);
+$('btnCheckSpeak').addEventListener('click', checkSpeaking);
+$('btnSendText').addEventListener('click', sendText);
+$('btnInterrupt').addEventListener('click', interrupt);
+$('btnUploadAudio').addEventListener('click', uploadAudio);
+$('btnRecToggle').addEventListener('click', toggleRecord);
+$('btnDownload').addEventListener('click', downloadRecord);
+$('btnAudiotype').addEventListener('click', setAudiotype);
+
+LT.Keys.bind('ctrl+enter', sendText, '发送文本');
+LT.Keys.bind('ctrl+i', interrupt, '打断播报');
+LT.Keys.bind('ctrl+shift+k', () => {
+    const list = LT.Keys.list().map(item => `${item.combo}: ${item.description}`).join('\n');
+    LT.Toast.info('快捷键', list, 6000);
+}, '查看快捷键帮助');
+
+$('quickTemplates').addEventListener('click', event => {
+    const button = event.target.closest('button[data-text]');
+    if (!button) return;
+    $('txtMessage').value = button.dataset.text;
+    sendText();
+});
+
+function savePreferences() {
+    LT.Store.set('avatar_id', $('offerAvatar').value);
+    LT.Store.set('ref_audio', $('offerRefAudio').value);
+    LT.Store.set('ref_text', $('offerRefText').value);
+}
+
+function loadPreferences() {
+    $('offerAvatar').value = LT.Store.get('avatar_id', 'wav2lip256_avatar1');
+    $('offerRefAudio').value = LT.Store.get('ref_audio', '');
+    $('offerRefText').value = LT.Store.get('ref_text', '');
+}
+
+loadPreferences();
+['offerAvatar', 'offerRefAudio', 'offerRefText'].forEach(id => {
+    $(id).addEventListener('change', savePreferences);
+});
+
+LT.Sync.on('connection', data => {
+    LT.Nav.updateStatus(data.connected);
+    if (data.sessionId) LT.Nav.updateSessionId(data.sessionId);
+});
+</script>
+</body>
+</html>

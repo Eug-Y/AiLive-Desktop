@@ -1,0 +1,13 @@
+# 不做行尾转换：本仓库里既有必须保持 CRLF 的 .cmd/.ps1，
+# 也有保持原始字节的二进制素材，交给工作区原样保存是最安全的做法。
+* -text
+
+# 供 GitHub 统计语言与渲染时参考
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.m4a  binary
+*.mp3  binary
+*.wav  binary
+*.pth  binary
+*.exe  binary

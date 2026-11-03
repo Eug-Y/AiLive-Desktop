@@ -1,0 +1,80 @@
+# ============================================================================
+#  AI 数字人桌面端 —— .gitignore
+#  原则：运行环境、模型权重、构建产物、用户数据、密钥、日志 一律不进仓库
+# ============================================================================
+
+# ---------- Python 运行环境 ----------
+env/
+miniconda3/
+venv/
+.venv/
+python/
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.egg-info/
+.pytest_cache/
+
+# ---------- 模型权重（体积大，按 README 第五节自行下载） ----------
+LiveTalking/models/
+*.pth
+*.onnx
+*.pt
+*.tar
+*.tar.gz
+*.zip
+
+# ---------- 构建产物 ----------
+app/dist/
+app/build/
+app/ui/
+*.spec.bak
+BUILD-INFO.txt
+
+# ---------- 用户数据与账号（绝不能进仓库） ----------
+LiveTalking/data/
+LiveTalking/data/**
+LiveTalking/avatars/*.tar.gz
+
+# ---------- 密钥与证书 ----------
+LiveTalking/.env
+.env
+.env.local
+*.key
+*.pem
+*.pfx
+*.jks
+
+# ---------- 日志 ----------
+*.log
+logs/
+server.live.stdout.log
+server.live.stderr.log
+
+# ---------- 外网分享 / 隧道 ----------
+当前分享地址.txt
+tunnel*.log
+tools/cloudflared.exe
+
+# ---------- 历史整理与本地归档 ----------
+archive/
+downloads/
+tmp/
+work/
+_qa/
+outputs/
+competition/
+_work/
+_gh/
+.dsh-vision-toolkit/
+.playwright-cli/
+.workbuddy/
+
+# ---------- 操作系统 / 编辑器 ----------
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.swp

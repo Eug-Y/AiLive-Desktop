@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>控制台 - LiveTalking</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<script src="common.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --panel: #1a1d27;
+  --border: #2a2d3a;
+  --text: #e6eaf2;
+  --dim: #9aa5b4;
+  /* 深色面板上的二级/三级文字专用值。
+     注意：不要直接覆盖 --text-secondary/--text-muted——本页同时混用了
+     common.css 的浅色 alert 组件（浅底），全局覆盖会让那些地方变成"浅字浅底"。 */
+  --dim-strong: #c3ccdd;
+  --green: #4caf84;
+  --red: #e0556a;
+  --yellow: #e0b855;
+  --blue: #5b9cf5;
+  --accent: #7c5cf5;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── 顶栏 ── */
+.header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.header-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.header h1 { font-size: 20px; font-weight: 600; }
+.header-sub { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dim); }
+.header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.header-account { color: var(--dim); font-size: 13px; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--dim); flex-shrink: 0; }
+.status-dot.online { background: var(--green); }
+.status-dot.warn { background: var(--yellow); }
+.status-dot.offline { background: var(--red); }
+
+/* ── 布局 ── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 0;
+}
+.card.full { grid-column: 1 / -1; }
+.card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 620;
+  color: var(--text);
+}
+.card h3 i { color: var(--blue); font-size: 16px; }
+
+/* ── 一键操作 ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.stat {
+  text-align: center;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.stat .value { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.stat .label { font-size: 12px; color: var(--dim); margin-top: 4px; }
+.value.green { color: var(--green); }
+.value.yellow { color: var(--yellow); }
+.value.red { color: var(--red); }
+
+.actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.actions .action-preflight { flex: 1 1 170px; }
+.actions .action-main { flex: 2 1 220px; }
+
+/* ── 步骤 / 检查结果 ── */
+.steps-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 8px;
+  font-size: 13.5px;
+  font-weight: 620;
+  color: var(--text);
+}
+.steps-title i { color: var(--blue); }
+.step {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 12px;
+  margin: 4px 0;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+.step .icon { font-size: 15px; flex-shrink: 0; }
+.step .step-time,
+.step-detail { margin-left: auto; color: var(--dim); font-size: 11.5px; }
+.step.done { background: rgba(76, 175, 132, 0.12); border-color: rgba(76, 175, 132, 0.28); }
+.step.done .icon { color: var(--green); }
+.step.failed { background: rgba(224, 85, 106, 0.12); border-color: rgba(224, 85, 106, 0.3); }
+.step.failed .icon { color: var(--red); }
+.step.pending, .step.skipped { background: rgba(154, 165, 180, 0.08); border-color: var(--border); color: var(--dim); }
+
+/* ── 健康检查 ── */
+#healthChecks { display: grid; gap: 8px; }
+#suggestions:empty { display: none; }
+#suggestions .alert { margin: 12px 0 0; }
+#suggestions .checklist { margin-top: 6px; }
+
+/* ── 排品队列 ── */
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 13px;
+}
+.queue-item + .queue-item { margin-top: 8px; }
+.queue-item.is-current { border-color: rgba(91, 156, 245, 0.55); background: rgba(91, 156, 245, 0.12); }
+.queue-tag { flex: 0 0 auto; font-size: 11px; font-weight: 600; color: var(--blue); }
+.queue-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.queue-meta { flex: 0 0 auto; color: var(--dim); font-size: 11.5px; white-space: nowrap; }
+
+/* ── 直播日志 ── */
+.log {
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.log .entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  line-height: 1.6;
+  word-break: break-word;
+}
+.log .entry:last-child { border-bottom: 0; }
+.log .time { flex: 0 0 auto; color: var(--dim); }
+.log .log-icon { flex: 0 0 auto; margin-top: 2px; font-size: 13px; color: var(--dim); }
+.log .log-icon.is-error { color: var(--red); }
+.log .empty-state { font-family: var(--font-sans); }
+
+/* ── 徽标 ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge.active { background: rgba(76, 175, 132, 0.18); color: #8ce6bd; border-color: rgba(76, 175, 132, 0.42); }
+.badge.idle { background: rgba(154, 165, 180, 0.16); color: var(--text); border-color: var(--border); }
+.badge.paused { background: rgba(224, 184, 85, 0.18); color: #f2d18a; border-color: rgba(224, 184, 85, 0.42); }
+
+@media (max-width: 800px) {
+  .container { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .header { padding: 12px 16px; }
+  .header h1 { font-size: 17px; }
+  .container { padding: 14px; gap: 12px; }
+  .card { padding: 16px; }
+  .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat .value { font-size: 22px; }
+  .actions .action-preflight,
+  .actions .action-main { flex: 1 1 100%; }
+}
+</style>
+</head>
+<body class="dark-theme">
+
+<nav id="lt-nav-container"></nav>
+
+<div class="header">
+  <div class="header-main">
+    <h1>AI 数字人直播控制台</h1>
+    <div class="header-sub">
+      <span class="status-dot offline" id="dot"></span>
+      <span id="dotLabel">正在检测运行状态…</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="liveState" class="badge idle">未开播</span>
+    <span id="accountName" class="header-account"></span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 一键操作 -->
+  <div class="card full">
+    <h3><i class="bi bi-play-circle"></i>一键操作</h3>
+    <div class="stats">
+      <div class="stat"><div class="value" id="statProducts">-</div><div class="label">可用商品</div></div>
+      <div class="stat"><div class="value" id="statCommission">¥0</div><div class="label">预估佣金</div></div>
+      <div class="stat"><div class="value" id="statDuration">0m</div><div class="label">直播时长</div></div>
+      <div class="stat"><div class="value" id="statSwitches">0</div><div class="label">已讲品数</div></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline action-preflight" onclick="preflight()"><i class="bi bi-search"></i>开播前检查</button>
+      <button class="btn btn-success action-main" id="btnStart" onclick="startLive()"><i class="bi bi-play-fill"></i>一键开播</button>
+      <button class="btn btn-danger action-main" id="btnStop" onclick="stopLive()" disabled><i class="bi bi-stop-fill"></i>一键下播</button>
+    </div>
+    <div id="stepsContainer"></div>
+  </div>
+
+  <!-- 健康检查 -->
+  <div class="card card-fill-reset">
+    <h3><i class="bi bi-heart-pulse"></i>健康检查</h3>
+    <div id="healthChecks"></div>
+    <div id="suggestions"></div>
+  </div>
+
+  <!-- 排品队列 -->
+  <div class="card card-fill-reset">
+    <h3><i class="bi bi-list-check"></i>排品队列</h3>
+    <div id="playQueue"></div>
+  </div>
+
+  <!-- 直播日志 -->
+  <div class="card full">
+    <h3><i class="bi bi-journal-text"></i>直播日志</h3>
+    <div class="log" id="logContainer"></div>
+  </div>
+
+</div>
+
+<script>
+/* 本页刻意做成常驻深色监控台。用 .dark-theme 而不是运行时 body.classList.add('dark')：
+   common.js 的 Theme.init() 会在 DOMContentLoaded 时按用户偏好重设 `dark` 类，
+   运行时加上的 `dark` 会被立刻摘掉，于是页面出现"深底 + 浅色主题文字"的不可读组合。
+   .dark-theme 是 common.css 里与 body.dark 并列的深色令牌选择器，主题系统不会动它。 */
+LT.Nav.current = 'console';
+LT.Nav.inject('#lt-nav-container');
+
+const API = '/api';
+const esc = (text) => LT.Utils.escape(text == null ? '' : String(text));
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(API + url, opts);
+  return res.json();
+}
+
+function formatTime(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts * 1000);
+  return d.toLocaleTimeString('zh-CN');
+}
+
+function formatDuration(s) {
+  if (!s) return '0m';
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}h${m % 60}m` : `${m}m`;
+}
+
+// ── 日志清洗：丢掉「状态没变」的重复条目，并把英文状态名转成中文 ──
+const STATE_ZH = {idle: '空闲', live: '直播中', ended: '已结束', connecting: '连接中', stopped: '已停止'};
+const LOG_ICONS = {
+  autopilot: 'bi-robot',
+  manual: 'bi-hand-index-thumb',
+  playqueue: 'bi-arrow-repeat',
+  atmosphere: 'bi-chat-dots',
+  error: 'bi-exclamation-octagon',
+  state: 'bi-record-circle',
+  system: 'bi-gear',
+};
+
+function localizeState(text) {
+  return String(text).replace(/\b(idle|live|ended|connecting|stopped)\b/g, (word) => STATE_ZH[word] || word);
+}
+
+function tidyHistory(history) {
+  const list = Array.isArray(history) ? history : [];
+  const kept = [];
+  let lastKey = '';
+  list.forEach((item) => {
+    const text = String(item.text || '').trim();
+    const move = text.match(/([A-Za-z_][\w-]*)\s*(?:→|->)\s*([A-Za-z_][\w-]*)/);
+    if (move && move[1] === move[2]) return;      // 状态未变化，不展示
+    const key = `${item.type || ''}|${text}`;
+    if (key === lastKey) return;                  // 与上一条完全重复
+    lastKey = key;
+    kept.push(item);
+  });
+  return kept;
+}
+
+const CHECK_LEVEL = {
+  ok: {cls: 'ok', icon: 'bi-check-circle-fill'},
+  blocker: {cls: 'bad', icon: 'bi-x-octagon-fill'},
+  warning: {cls: 'warn', icon: 'bi-exclamation-triangle-fill'},
+  optional: {cls: '', icon: 'bi-dash-circle'},
+};
+
+function checkLevel(check) {
+  if (check.passed) return 'ok';
+  if (check.level === 'blocker') return 'blocker';
+  if (check.level === 'optional') return 'optional';
+  return 'warning';
+}
+
+// 顶栏与账号下拉已展示当前账号，健康检查里不再重复账号名
+function checkLabel(check) {
+  const label = String(check.label || '');
+  return label.startsWith('活跃账号') ? '直播账号已启用' : label;
+}
+
+// ── 仪表盘刷新 ──
+async function refresh() {
+  try {
+    const data = await fetchJSON('/workflow/status');
+    renderDashboard(data);
+  } catch (e) {
+    console.error('Refresh failed:', e);
+  }
+}
+
+function renderDashboard(data) {
+  // 账号
+  if (data.account) {
+    const name = data.account.name || '';
+    document.getElementById('accountName').textContent = name ? `当前账号：${name}` : '';
+  }
+
+  // 直播状态
+  if (data.live) {
+    const ls = data.live;
+    const state = ls.live_state || 'idle';
+    const badge = document.getElementById('liveState');
+    badge.textContent = state === 'live' ? '直播中' : state === 'ended' ? '已结束' : '未开播';
+    badge.className = 'badge ' + (state === 'live' ? 'active' : 'idle');
+    document.getElementById('dot').className = 'status-dot ' + (state === 'live' ? 'online' : 'offline');
+
+    document.getElementById('btnStart').disabled = state === 'live';
+    document.getElementById('btnStop').disabled = state !== 'live';
+
+    // 统计
+    const stats = ls.stats || {};
+    const pq = ls.play_queue || {};
+    const sales = ls.sales || {};
+    const commission = sales.commission || {};
+
+    document.getElementById('statProducts').textContent = sales.ready_count || 0;
+    document.getElementById('statCommission').textContent = '¥' + (commission.total_estimated_commission || 0);
+    document.getElementById('statDuration').textContent = formatDuration(
+      pq.total_play_seconds || (ls.live_started_at ? (Date.now()/1000 - ls.live_started_at) : 0)
+    );
+    document.getElementById('statSwitches').textContent = pq.total_switches || stats.product_switches || 0;
+
+    // 排品队列
+    const seq = pq.sequence || [];
+    document.getElementById('playQueue').innerHTML = seq.length
+      ? seq.map((item, index) => `
+          <div class="queue-item ${item.is_current ? 'is-current' : ''}">
+            <span class="queue-tag">${item.is_current ? '正在讲解' : String(index + 1).padStart(2, '0')}</span>
+            <span class="queue-name">${esc(item.product_name)}</span>
+            <span class="queue-meta">${esc(item.duration)}s${item.progress > 0 ? ' · ' + esc(item.progress) + '%' : ''}</span>
+          </div>`).join('')
+      : `<div class="empty-state compact">
+           <i class="bi bi-inbox empty-state-icon"></i>
+           <h4>排品队列尚未初始化</h4>
+           <p>开播后系统会按商品顺序自动排品，并在这里显示讲解进度。</p>
+         </div>`;
+
+    // 日志
+    const history = tidyHistory(ls.history);
+    document.getElementById('logContainer').innerHTML = history.length
+      ? history.slice(0, 20).map((h) => `
+          <div class="entry">
+            <span class="time">${esc(formatTime(h.time))}</span>
+            <i class="bi ${LOG_ICONS[h.type] || 'bi-dot'} log-icon ${h.type === 'error' ? 'is-error' : ''}"></i>
+            <span>${esc(localizeState(h.text))}</span>
+          </div>`).join('')
+      : `<div class="empty-state compact">
+           <i class="bi bi-journal-text empty-state-icon"></i>
+           <h4>暂无有效日志</h4>
+           <p>只有真实的状态变化和开播、下播操作会记录在这里。</p>
+         </div>`;
+  }
+
+  // 健康检查
+  const health = data.health || {};
+  const checks = health.checks || [];
+  const suggestions = health.suggestions || [];
+  document.getElementById('healthChecks').innerHTML = checks.length
+    ? checks.map((c) => {
+        const meta = CHECK_LEVEL[checkLevel(c)];
+        return `<div class="check-item ${meta.cls}">
+          <i class="bi ${meta.icon}"></i>
+          <span>${esc(checkLabel(c))}</span>
+        </div>`;
+      }).join('')
+    : '<div class="hint">暂无检查项。</div>';
+  document.getElementById('suggestions').innerHTML = suggestions.length
+    ? `<div class="alert alert-warning">
+         <i class="bi bi-lightbulb"></i>
+         <div class="alert-body">
+           <div class="alert-title">开播前建议（${suggestions.length} 项）</div>
+           <div class="checklist">
+             ${suggestions.map((s) => `<div class="check-item warn"><i class="bi bi-caret-right-fill"></i><span>${esc(s)}</span></div>`).join('')}
+           </div>
+         </div>
+       </div>`
+    : '';
+
+  // 健康分数
+  if (health.score !== undefined && health.score !== null) {
+    const dot = document.getElementById('dot');
+    const level = health.score >= 70 ? 'online' : health.score >= 40 ? 'warn' : 'offline';
+    dot.className = 'status-dot ' + level;
+    document.getElementById('dotLabel').textContent = `开播准备度 ${health.score}%`;
+  }
+}
+
+// ── 操作 ──
+async function preflight() {
+  const stepsDiv = document.getElementById('stepsContainer');
+  stepsDiv.innerHTML = '<div class="steps-title"><span class="spinner spinner-sm"></span>正在执行开播前检查…</div>';
+  try {
+    const data = await fetchJSON('/workflow/preflight');
+    const results = data.checks || [];
+    stepsDiv.innerHTML = '<div class="steps-title"><i class="bi bi-search"></i>开播前检查结果</div>' +
+      results.map((c) => {
+        const meta = CHECK_LEVEL[checkLevel(c)];
+        return `<div class="step ${c.passed ? 'done' : 'failed'}">
+          <i class="bi ${meta.icon} icon"></i>
+          <span>${esc(c.label)}</span>
+          ${c.detail ? `<span class="step-detail">${esc(c.detail)}</span>` : ''}
+        </div>`;
+      }).join('') +
+      (data.ready
+        ? '<div class="alert alert-success" style="margin:12px 0 0"><i class="bi bi-check-circle"></i><div class="alert-body">所有必要项都已通过，可以开播。</div></div>'
+        : '<div class="alert alert-danger" style="margin:12px 0 0"><i class="bi bi-exclamation-octagon"></i><div class="alert-body">请先解决上述问题再开播。</div></div>');
+  } catch (e) {
+    stepsDiv.innerHTML = `<div class="alert alert-danger" style="margin:12px 0 0"><i class="bi bi-exclamation-octagon"></i><div class="alert-body">检查请求失败：${esc(e.message)}</div></div>`;
+    LT.Toast.error('检查请求失败：' + e.message);
+  }
+}
+
+async function startLive() {
+  const startButton = document.getElementById('btnStart');
+  LT.Loading.button(startButton, true);
+  startButton.disabled = true;
+  startButton.textContent = '初始化中…';
+  const stepsDiv = document.getElementById('stepsContainer');
+  stepsDiv.innerHTML = '<div class="steps-title"><span class="spinner spinner-sm"></span>正在初始化全链路…</div>';
+
+  try {
+    const data = await fetchJSON('/workflow/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({play_mode: 'loop', atmosphere_interval: 180})
+    });
+
+    const stepIcons = {done: 'bi-check-circle-fill', failed: 'bi-x-circle-fill', skipped: 'bi-dash-circle'};
+    stepsDiv.innerHTML = '<div class="steps-title">' +
+      (data.success
+        ? `<i class="bi bi-check-circle"></i>开播成功（${esc(data.duration_ms)}ms）`
+        : `<i class="bi bi-x-octagon"></i>开播失败（${esc(data.duration_ms)}ms）`) +
+      '</div>' +
+      (data.steps || []).map((s) => `
+        <div class="step ${s.status}">
+          <i class="bi ${stepIcons[s.status] || 'bi-dot'} icon"></i>
+          <span>${esc(s.label)}</span>
+          <span class="step-time">${esc(s.duration_ms)}ms</span>
+        </div>`).join('');
+
+    if (!data.success) {
+      stepsDiv.innerHTML += `<div class="alert alert-danger" style="margin:12px 0 0"><i class="bi bi-exclamation-octagon"></i><div class="alert-body">错误：${esc(data.error)}</div></div>`;
+      LT.Toast.error('开播失败：' + (data.error || '未知错误'));
+    } else {
+      LT.Toast.success('开播成功！全链路已启动');
+    }
+  } catch (e) {
+    stepsDiv.innerHTML = `<div class="alert alert-danger" style="margin:12px 0 0"><i class="bi bi-exclamation-octagon"></i><div class="alert-body">请求失败：${esc(e.message)}</div></div>`;
+    LT.Toast.error('请求失败：' + e.message);
+  } finally {
+    LT.Loading.button(startButton, false);
+    startButton.innerHTML = '<i class="bi bi-play-fill"></i>一键开播';
+    refresh();
+  }
+}
+
+async function stopLive() {
+  const stopButton = document.getElementById('btnStop');
+  LT.Loading.button(stopButton, true);
+  stopButton.disabled = true;
+  stopButton.textContent = '停播中…';
+  const stepsDiv = document.getElementById('stepsContainer');
+  stepsDiv.innerHTML = '<div class="steps-title"><span class="spinner spinner-sm"></span>正在停止所有模块…</div>';
+
+  try {
+    const data = await fetchJSON('/workflow/stop', {method: 'POST'});
+    const stepIcons = {done: 'bi-check-circle-fill', failed: 'bi-x-circle-fill', skipped: 'bi-dash-circle'};
+    stepsDiv.innerHTML = '<div class="steps-title">' +
+      (data.success
+        ? `<i class="bi bi-stop-circle"></i>已安全下播（${esc(data.duration_ms)}ms）`
+        : `<i class="bi bi-exclamation-triangle"></i>下播有异常（${esc(data.duration_ms)}ms）`) +
+      '</div>' +
+      (data.steps || []).map((s) => `
+        <div class="step ${s.status}">
+          <i class="bi ${stepIcons[s.status] || 'bi-dot'} icon"></i>
+          <span>${esc(s.label)}</span>
+          <span class="step-time">${esc(s.duration_ms)}ms</span>
+        </div>`).join('');
+
+    if (!data.success) {
+      LT.Toast.warning('下播有异常：' + (data.error || '部分模块未正常关闭'));
+    } else {
+      LT.Toast.success('已安全下播');
+    }
+  } catch (e) {
+    stepsDiv.innerHTML = `<div class="alert alert-danger" style="margin:12px 0 0"><i class="bi bi-exclamation-octagon"></i><div class="alert-body">请求失败：${esc(e.message)}</div></div>`;
+    LT.Toast.error('停播请求失败：' + e.message);
+  } finally {
+    LT.Loading.button(stopButton, false);
+    stopButton.innerHTML = '<i class="bi bi-stop-fill"></i>一键下播';
+    refresh();
+  }
+}
+
+// 初始化
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字人形象生成 - LiveTalking</title>
+    <!-- 注意：Bootstrap 必须排在 common.css 之前，否则会覆盖设计系统 v3 的组件样式 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 页面级补充样式：组件外观一律交给 common.css v3，这里只保留本页独有的钩子 */
+
+        /* 提示条里的按钮不要继承 .alert a 的下划线 */
+        .alert .btn { text-decoration: none; }
+
+        /* 单条生成任务 */
+        .task-item {
+            padding: var(--space-4) 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .task-item:first-child { padding-top: 0; }
+        .task-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+        /* 任务状态徽标 —— 颜色全部取自 v3 变量，不再写死浅底浅字 */
+        .task-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 11.5px;
+            font-weight: 600;
+            line-height: 1.5;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        .task-status.is-pending { background: var(--warning-bg); color: var(--warning-fg); }
+        .task-status.is-running { background: var(--info-bg); color: var(--info-fg); }
+        .task-status.is-completed { background: var(--success-bg); color: var(--success-fg); }
+        .task-status.is-failed { background: var(--danger-bg); color: var(--danger-fg); }
+
+        .spin { animation: rotation 1s linear infinite; }
+        @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(359deg); } }
+    </style>
+</head>
+<body>
+
+<nav id="lt-nav-container"></nav>
+
+<div class="container">
+    <div class="page-heading">
+        <h1 class="page-title"><i class="bi bi-person-bounding-box"></i> 数字人形象生成</h1>
+        <p class="page-subtitle">上传真人视频，生成可用于直播的数字人形象</p>
+        <div class="actions">
+            <a class="btn btn-sm btn-outline" href="/console.html" title="前往控制台开播与管理直播">
+                <i class="bi bi-broadcast"></i> 前往控制台
+            </a>
+        </div>
+    </div>
+
+    <!-- 未连接提示：默认隐藏，连接检测失败时显示 -->
+    <div class="alert alert-warning d-none" id="connBanner">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div class="alert-body">
+            <div class="alert-title">尚未连接数字人服务</div>
+            当前无法确认后端数字人服务是否已连接，此时提交生成任务不会成功。
+            请先到「数字人驱动」页面建立实时连接，或点下方按钮重新检测。
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                <a class="btn btn-outline btn-sm" href="/index.html"><i class="bi bi-plug"></i> 去连接数字人</a>
+                <button type="button" class="btn btn-outline btn-sm" id="recheckBtn">
+                    <i class="bi bi-arrow-repeat"></i> 重新检测
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- 提交任务表单 -->
+        <div class="col-lg-5">
+            <div class="glass-card">
+                <div class="card-header">
+                    <i class="bi bi-plus-circle-fill"></i> 创建新生成任务
+                </div>
+                <div class="card-body">
+                    <form id="taskForm" novalidate>
+                        <div class="mb-3">
+                            <label class="form-label" for="modelSelect">算法模型</label>
+                            <select class="form-select" name="model" id="modelSelect" required>
+                                <option value="wav2lip">Wav2Lip</option>
+                                <option value="musetalk">MuseTalk</option>
+                            </select>
+                            <div class="fs-xs text-muted mt-1">用于驱动口型的生成模型，切换模型后生成速度与画质会有差异。</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="avatarId">数字人形象 ID</label>
+                            <input type="text" class="form-control" name="avatar_id" id="avatarId" required
+                                   autocomplete="off" placeholder="请输入形象 ID，例如 wav2lip256_test">
+                            <div class="fs-xs text-muted mt-1">该 ID 用于标识生成结果，建议使用英文、数字和下划线。</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="videoFile">视频文件</label>
+                            <label class="form-file" for="videoFile">
+                                <input type="file" id="videoFile" name="video_file" accept="video/*" required>
+                                <span class="file-name is-empty" id="videoFileName">未选择文件</span>
+                                <span class="file-btn"><i class="bi bi-folder2-open"></i> 选择文件</span>
+                            </label>
+                            <div class="fs-xs text-muted mt-1">支持 mp4、mov 等常见格式，建议使用正面清晰、时长较短的真人视频。</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <a class="btn btn-outline w-100" data-bs-toggle="collapse" href="#advancedParams" role="button"
+                               aria-expanded="false" aria-controls="advancedParams">
+                                <i class="bi bi-gear"></i> 高级参数（可选）
+                            </a>
+                            <div class="collapse mt-2" id="advancedParams">
+                                <div class="panel">
+                                    <div class="row g-2">
+                                        <div class="col-12 col-sm-6">
+                                            <label class="form-label" for="imgSizeInput">图像大小</label>
+                                            <input type="number" class="form-control form-control-sm" name="img_size"
+                                                   id="imgSizeInput" value="256">
+                                        </div>
+                                        <div class="col-12 col-sm-6">
+                                            <label class="form-label" for="bboxShift">BBox 偏移（MuseTalk 专用）</label>
+                                            <input type="number" class="form-control form-control-sm" name="bbox_shift"
+                                                   id="bboxShift" value="0">
+                                        </div>
+                                        <div class="col-12 col-sm-6">
+                                            <label class="form-label" for="pads">边缘填充（上 下 左 右）</label>
+                                            <input type="text" class="form-control form-control-sm" name="pads"
+                                                   id="pads" value="0 10 0 0" placeholder="例如 0 10 0 0">
+                                        </div>
+                                        <div class="col-12 col-sm-6">
+                                            <label class="form-label" for="faceDetBatch">人脸检测批大小</label>
+                                            <input type="number" class="form-control form-control-sm"
+                                                   name="face_det_batch_size" id="faceDetBatch" value="4">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-2" id="submitBtn">
+                            <i class="bi bi-cloud-arrow-up-fill me-2"></i>提交生成任务
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 任务列表 -->
+        <div class="col-lg-7 card-fill-reset">
+            <div class="glass-card">
+                <div class="card-header">
+                    <i class="bi bi-list-task"></i> 任务列表
+                    <span class="card-actions" id="refreshInfo">
+                        <span class="fs-xs text-muted d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-repeat spin"></i> 每 3 秒自动刷新
+                        </span>
+                    </span>
+                </div>
+                <div class="card-body" id="taskList" style="max-height: 600px; overflow-y: auto;">
+                    <div class="spinner-box">
+                        <div class="spinner"></div>
+                        正在加载任务列表…
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="common.js"></script>
+<script>
+    LT.Nav.current = 'avatar';
+    LT.Nav.inject('#lt-nav-container');
+
+    const taskForm = document.getElementById('taskForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const taskList = document.getElementById('taskList');
+    const fileInput = document.getElementById('videoFile');
+    const fileNameEl = document.getElementById('videoFileName');
+    const connBanner = document.getElementById('connBanner');
+    const recheckBtn = document.getElementById('recheckBtn');
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[ch]));
+    }
+
+    // ── 连接状态：后端存在活跃会话即视为「已连接数字人服务」 ──
+    let connState = 'unknown';
+
+    function applyConnState(connected) {
+        connState = connected ? 'online' : 'offline';
+        LT.Nav.updateStatus(connected);
+        if (connBanner) connBanner.classList.toggle('d-none', connected);
+    }
+
+    async function checkConnection() {
+        try {
+            const response = await fetch('/api/admin/sessions');
+            const result = await response.json();
+            const sessions = (result && result.data && result.data.sessions) || [];
+            applyConnState(result && result.code === 0 && sessions.length > 0);
+        } catch (error) {
+            applyConnState(false);
+        }
+        return connState === 'online';
+    }
+
+    if (recheckBtn) {
+        recheckBtn.addEventListener('click', async () => {
+            LT.Loading.button(recheckBtn, true);
+            const connected = await checkConnection();
+            LT.Loading.button(recheckBtn, false);
+            if (connected) {
+                LT.Toast.success('已连接到数字人服务', '现在可以提交生成任务了');
+            } else {
+                LT.Toast.warning('仍未连接数字人服务', '请先到「数字人驱动」页面建立连接');
+            }
+        });
+    }
+
+    // ── 自定义文件选择：同步文件名显示 ──
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) {
+            fileNameEl.textContent = file.name;
+            fileNameEl.title = file.name;
+            fileNameEl.classList.remove('is-empty');
+        } else {
+            fileNameEl.textContent = '未选择文件';
+            fileNameEl.title = '';
+            fileNameEl.classList.add('is-empty');
+        }
+    });
+
+    // 提交任务
+    taskForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // 前置校验：未连接时明确阻断，不做静默失败
+        if (!(await checkConnection())) {
+            LT.Toast.warning('需要先连接数字人服务', '请到「数字人驱动」页面建立连接后再提交生成任务');
+            if (connBanner) connBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // 前置校验：形象 ID
+        const avatarIdInput = taskForm.elements['avatar_id'];
+        if (!avatarIdInput.value.trim()) {
+            LT.Toast.warning('请填写数字人形象 ID', '例如 wav2lip256_test');
+            avatarIdInput.focus();
+            return;
+        }
+
+        // 前置校验：视频文件
+        if (!fileInput.files || !fileInput.files.length) {
+            LT.Toast.warning('请先选择视频文件', '支持 mp4、mov 等常见格式');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>正在上传并创建任务...';
+
+        const formData = new FormData(taskForm);
+
+        try {
+            const response = await fetch('/api/avatar/task', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.code === 0) {
+                LT.Toast.success('任务提交成功', '任务编号 ' + result.data.task_id);
+                taskForm.reset();
+                fileNameEl.textContent = '未选择文件';
+                fileNameEl.title = '';
+                fileNameEl.classList.add('is-empty');
+                refreshTasks();
+            } else {
+                LT.Toast.error('提交失败', result.msg);
+            }
+        } catch (error) {
+            LT.Toast.error('提交发生网络错误', error.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i>提交生成任务';
+        }
+    });
+
+    // 刷新任务列表
+    async function refreshTasks() {
+        try {
+            const response = await fetch('/api/avatar/tasks');
+            const result = await response.json();
+
+            if (result.code === 0) {
+                renderTasks(result.data.tasks);
+            }
+        } catch (error) {
+            console.error('Load tasks failed:', error);
+        }
+    }
+
+    const STATUS_TEXT = {
+        pending: '排队中',
+        running: '生成中',
+        completed: '已完成',
+        failed: '已失败'
+    };
+
+    const STATUS_CLASS = {
+        pending: 'is-pending',
+        running: 'is-running',
+        completed: 'is-completed',
+        failed: 'is-failed'
+    };
+
+    function renderTasks(tasks) {
+        if (!tasks || tasks.length === 0) {
+            taskList.innerHTML = `
+                <div class="empty-state compact">
+                    <i class="bi bi-inbox empty-state-icon"></i>
+                    <h4>暂无生成任务</h4>
+                    <p>在左侧填写形象 ID 并上传视频后，任务会出现在这里，进度每 3 秒自动更新。</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        tasks.forEach(task => {
+            const date = new Date(task.start_time * 1000).toLocaleString('zh-CN', { hour12: false });
+            const statusText = STATUS_TEXT[task.status] || task.status;
+            const statusClass = STATUS_CLASS[task.status] || '';
+            const isPending = task.status === 'pending';
+            const progress = Number(task.progress) || 0;
+
+            html += `
+                <div class="task-item">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div class="flex-1">
+                            <div class="fw-bold text-mono">任务编号 #${escapeHtml(task.task_id)}</div>
+                            <div class="fs-sm text-muted mt-1">
+                                算法模型 <b class="text-mono">${escapeHtml(task.model_type)}</b>
+                                · 形象 ID <b class="text-mono">${escapeHtml(task.avatar_id)}</b>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="task-status ${statusClass}">${escapeHtml(statusText)}</span>
+                            <div class="fs-xs text-muted mt-1">${date}</div>
+                        </div>
+                    </div>
+
+                    ${task.status !== 'completed' ? `
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <div class="progress flex-1" role="progressbar" aria-label="生成进度"
+                             aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                 style="width: ${progress}%"></div>
+                        </div>
+                        <span class="fs-xs text-muted" style="min-width: 38px; text-align: right;">${progress}%</span>
+                    </div>` : ''}
+
+                    ${task.error_msg ? `
+                    <div class="alert alert-danger mt-2">
+                        <i class="bi bi-x-circle"></i>
+                        <div class="alert-body">${escapeHtml(task.error_msg)}</div>
+                    </div>` : ''}
+
+                    <div class="d-flex justify-content-end gap-2 mt-2">
+                        ${isPending ? `
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteTask('${task.task_id}')">
+                            <i class="bi bi-trash"></i> 取消任务
+                        </button>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        taskList.innerHTML = html;
+    }
+
+    async function deleteTask(taskId) {
+        if (!confirm('确定要取消该排队中的任务吗？')) return;
+
+        try {
+            const response = await fetch(`/api/avatar/task/${taskId}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (result.code === 0) {
+                LT.Toast.success('任务已取消');
+                refreshTasks();
+            } else {
+                LT.Toast.error('取消失败', result.msg);
+            }
+        } catch (error) {
+            LT.Toast.error('删除请求失败', error.message);
+        }
+    }
+
+    // 初始加载及自动定时刷新
+    refreshTasks();
+    setInterval(refreshTasks, 3000);
+
+    checkConnection();
+    setInterval(checkConnection, 10000);
+
+</script>
+
+</body>
+</html>

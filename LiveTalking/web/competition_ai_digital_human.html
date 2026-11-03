@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI 数字人应用参赛项目展示 - LiveTalking</title>
+  <link rel="stylesheet" href="/common.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* 本页只补充 v3 未覆盖的展示型结构；颜色、圆角、间距一律沿用 common.css 的变量 */
+    .competition-main{max-width:1380px;margin:0 auto;padding:0 var(--space-5) var(--space-8)}
+
+    /* 首屏横幅：与导航同一套品牌渐变 */
+    .competition-hero{margin:0 calc(var(--space-5) * -1) var(--space-5);padding:var(--space-8) max(var(--space-5),calc((100% - 1340px)/2)) var(--space-6);background:linear-gradient(120deg,#1e293b 0%,#312e81 52%,#6d28d9 100%);color:#fff}
+    .competition-hero .page-heading{margin:0 0 var(--space-3);gap:var(--space-3)}
+    .competition-hero .page-title{font-size:40px;font-weight:700;letter-spacing:-.02em;color:#fff}
+    .competition-hero .subtitle{color:#c7d2fe;font-size:13.5px;font-weight:600}
+    .eyebrow{margin:0 0 var(--space-2);color:#a5b4fc;font-size:12.5px;font-weight:700;letter-spacing:.08em}
+    .hero-lead{max-width:72ch;margin:0;color:#e2e8f0;font-size:15.5px;line-height:1.8}
+    .hero-tags{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-4)}
+    .hero-tag{padding:5px 11px;border:1px solid rgba(255,255,255,.38);border-radius:var(--radius-pill);color:#fff;font-size:12.5px;background:rgba(255,255,255,.12)}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-5)}
+    /* 深色横幅上把主按钮反白，保证对比度；全页仅此一个 btn-primary */
+    .competition-hero .btn-primary{background:#fff;color:var(--primary-darker);border-color:#fff;box-shadow:var(--shadow-sm)}
+    .competition-hero .btn-primary:hover:not(:disabled){background:#eef2ff;color:var(--primary-darker);box-shadow:var(--shadow-md)}
+    .competition-hero .btn-outline{background:transparent;border-color:rgba(255,255,255,.55);color:#fff}
+    .competition-hero .btn-outline:hover:not(:disabled){background:rgba(255,255,255,.16);border-color:#fff;color:#fff}
+    #demoMessage{margin-top:var(--space-3);color:#c7d2fe;font-size:13px;min-height:20px}
+
+    /* 章节层级 */
+    .section{margin-top:var(--space-6)}
+    .section-heading{margin:0 0 var(--space-2)}
+    .section-heading h2{margin:0}
+    .section-desc{max-width:72ch;margin:0 0 var(--space-4);color:var(--text-secondary);font-size:13.5px;line-height:1.7}
+
+    /* 卡片内文 */
+    .card-icon{display:grid;place-items:center;width:36px;height:36px;margin-bottom:var(--space-3);border-radius:var(--radius-sm);background:var(--primary-light);color:var(--primary);font-size:18px}
+    .card h3{margin:0 0 var(--space-2);font-size:16px}
+    .card p{margin:0;color:var(--text-secondary);font-size:13.5px;line-height:1.75}
+    .card .divider{margin:var(--space-3) 0}
+    .card-body > .alert:last-child{margin-bottom:0}
+    .card-body > .checklist:last-child{margin-bottom:0}
+    .proof{margin:0;font-size:12.5px;color:var(--text-secondary)}
+    .proof i{color:var(--success)}
+    .proof code{font-size:12.5px;color:var(--text-secondary)}
+
+    /* 演示场景：左右分栏 */
+    .evidence-split{display:grid;grid-template-columns:1.2fr .8fr;gap:var(--space-5);align-items:center}
+
+    /* 时间线内文 */
+    .timeline-item h3{margin:0 0 4px;font-size:15px}
+    .timeline-item p{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.65}
+
+    /* 证据表单：整行字段在栅格里跨两列 */
+    .field-full{grid-column:1/-1}
+
+    @media(max-width:992px){
+      .competition-hero .page-title{font-size:32px}
+      .evidence-split{grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
+    }
+    @media(max-width:768px){
+      .competition-main{padding:0 var(--space-3) var(--space-6)}
+      .competition-hero{margin:0 calc(var(--space-3) * -1) var(--space-4);padding:var(--space-6) var(--space-3) var(--space-5)}
+      .competition-hero .page-title{font-size:26px}
+      .hero-lead{font-size:14.5px}
+      .field-full{grid-column:auto}
+    }
+  </style>
+</head>
+<body>
+  <nav id="lt-nav-container"></nav>
+  <main class="competition-main">
+    <header class="competition-hero">
+      <p class="eyebrow">2026 第六届全国大学生技术创新创业大赛 · OPC 赛道</p>
+      <div class="page-heading">
+        <h1 class="page-title">AI数字人应用</h1>
+        <span class="subtitle">参赛项目展示 · 面向小微商家的直播经营助手</span>
+      </div>
+      <p class="hero-lead">项目首个落地场景是面向小微商家的直播经营助手，把商品资料、脚本生成、数字人播报、互动路由、人工接管和直播复盘串成一条可验证的 AI 应用链路，其他行业能力按相同底座扩展。</p>
+      <div class="hero-tags">
+        <span class="hero-tag">AI 大模型应用</span>
+        <span class="hero-tag">直播运营</span>
+        <span class="hero-tag">WorkBuddy 协作</span>
+        <span class="hero-tag">真人在环</span>
+      </div>
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="loadDemo" type="button"><i class="bi bi-magic"></i>载入参赛演示场景</button>
+        <a class="btn btn-outline" href="/live_console.html"><i class="bi bi-broadcast-pin"></i>打开直播工作台</a>
+        <a class="btn btn-outline" href="#materials"><i class="bi bi-file-earmark-text"></i>查看材料清单</a>
+      </div>
+      <div id="demoMessage"></div>
+    </header>
+
+    <section class="stat-grid" role="group" aria-label="当前演示环境状态">
+      <div class="stat-card is-info">
+        <span class="stat-label"><i class="bi bi-hdd-network"></i> 工作台服务</span>
+        <span class="stat-value" id="serviceState">检测中…</span>
+      </div>
+      <div class="stat-card is-info">
+        <span class="stat-label"><i class="bi bi-clipboard-check"></i> 开播准备度</span>
+        <span class="stat-value" id="readinessState">--</span>
+      </div>
+      <div class="stat-card is-info">
+        <span class="stat-label"><i class="bi bi-box-seam"></i> 可用资料 / 场景</span>
+        <span class="stat-value" id="productState">--</span>
+      </div>
+      <div class="stat-card is-info">
+        <span class="stat-label"><i class="bi bi-magic"></i> 自动话术 / OCR</span>
+        <span class="stat-value" id="automationState">--</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading"><i class="bi bi-question-circle"></i><h2>项目回答什么问题</h2></div>
+      <p class="section-desc">先把直播运营中最重复、最适合结构化的环节交给 AI，再把商品事实、价格承诺和风险处置留给真人。</p>
+      <div class="grid-2">
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-exclamation-triangle"></i></div>
+            <h3>小微商家缺少稳定的直播运营能力</h3>
+            <p>选品资料、讲品脚本、数字人画面和客服互动分散在不同工具里，重复准备消耗大量时间。</p>
+          </div>
+        </article>
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-arrow-repeat"></i></div>
+            <h3>自动化必须有边界和接管机制</h3>
+            <p>简单问题、复杂问题和敏感问题不能用同一种方式回答，每一场运行还需要留下可追溯的复盘记录。</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <section class="section">
+      <div class="section-heading"><i class="bi bi-easel"></i><h2>参赛演示场景</h2></div>
+      <p class="section-desc">点击上方按钮即可载入合成演示数据。它只用于录屏和本地彩排，不代表真实客户、收入或转化结果。</p>
+      <div class="card">
+        <div class="card-body evidence-split">
+          <div>
+            <h3 style="margin-top:0">从一个示例商品讲解，展示完整控制链</h3>
+            <p>WorkBuddy 生成需求脚本和测试问题，LiveTalking 负责数字人播报。观众问题先走本地意图规则，未命中时进入受控的大模型兜底，超出资料范围则提示人工确认。</p>
+          </div>
+          <div class="alert alert-warning">
+            <i class="bi bi-shield-check"></i>
+            <div class="alert-body">
+              <div class="alert-title">演示边界</div>
+              保留 AI 标识，不展示密钥，不虚构客户和经营数据。正式上线前替换为已授权、已核对的真实资料。
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <section class="section">
+      <div class="section-heading"><i class="bi bi-clipboard-data"></i><h2>从赛事要求到现场证据</h2></div>
+      <p class="section-desc">以下映射严格区分“系统已实现能力”和“需要用真实彩排补充的经营结果”。</p>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr><th>赛事关注点</th><th>项目对应能力</th><th>建议现场展示</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>AI 大模型应用</td><td>WorkBuddy 任务编排、脚本生成、数字人表达和互动应答</td><td>输入需求，生成脚本和问题矩阵，再在 LiveTalking 中播报</td></tr>
+                <tr><td>技术实现</td><td>数字人形象（Avatar）、语音合成（TTS）、OCR、意图路由、大模型（LLM）、缓存和状态机</td><td>展示数字人画面、字幕、路由结果和运行状态</td></tr>
+                <tr><td>创新性</td><td>资料约束、本地规则优先、大模型兜底、真人接管</td><td>依次测试知识内、模型兜底和超范围问题</td></tr>
+                <tr><td>OPC 全流程</td><td>从需求、脚本、测试、演示到复盘均可由小团队完成</td><td>用 WorkBuddy 生成验收表，保留真实待补录项</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <section class="section">
+      <div class="section-heading"><i class="bi bi-diagram-3"></i><h2>一条可审计的数字人应用闭环</h2></div>
+      <p class="section-desc">系统的核心价值不是无人值守，而是让每一次表达都有依据、每一次异常都更容易被接管。</p>
+      <div class="flow">
+        <div class="flow-step"><span class="step-no">01</span><span class="step-title">资料整理</span><span class="step-desc">知识、流程、常见问题和授权</span></div>
+        <div class="flow-step"><span class="step-no">02</span><span class="step-title">脚本生成</span><span class="step-desc">WorkBuddy 拆解任务并生成可审内容</span></div>
+        <div class="flow-step"><span class="step-no">03</span><span class="step-title">数字人表达</span><span class="step-desc">视频、口型、语音合成、字幕与 AI 标识</span></div>
+        <div class="flow-step"><span class="step-no">04</span><span class="step-title">问题理解</span><span class="step-desc">OCR 获取字幕并匹配用户意图</span></div>
+        <div class="flow-step"><span class="step-no">05</span><span class="step-title">分层应答</span><span class="step-desc">本地规则、模型兜底和真人接管</span></div>
+        <div class="flow-step"><span class="step-no">06</span><span class="step-title">复盘导出</span><span class="step-desc">脚本、互动、接管和异常记录</span></div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <section class="section">
+      <div class="section-heading"><i class="bi bi-stars"></i><h2>已实现能力</h2></div>
+      <p class="section-desc">这些能力可以直接从当前项目中演示；经营结果和市场效果仍需通过真实样本验证。</p>
+      <div class="grid-3">
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-journal-text"></i></div>
+            <h3>知识资料与合规</h3>
+            <p>复用结构化资料字段、禁用词和安全回答机制，避免数字人脱离依据自由承诺。</p>
+            <hr class="divider">
+            <p class="proof"><i class="bi bi-patch-check-fill"></i> 证据：<code>server/sales_catalog.py</code>、合规检查</p>
+          </div>
+        </article>
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-magic"></i></div>
+            <h3>AI 脚本工作流</h3>
+            <p>把需求转成开场、讲解、流程、边界和行动引导，支持队列、间隔和人工审核。</p>
+            <hr class="divider">
+            <p class="proof"><i class="bi bi-patch-check-fill"></i> 证据：生成并应用话术、自动话术队列</p>
+          </div>
+        </article>
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-chat-left-text"></i></div>
+            <h3>意图路由与应答</h3>
+            <p>先用本地规则处理高频问题，未命中时调用大模型，超出资料范围则转人工。</p>
+            <hr class="divider">
+            <p class="proof"><i class="bi bi-patch-check-fill"></i> 证据：字幕 OCR、模拟问题、应答记录</p>
+          </div>
+        </article>
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-soundwave"></i></div>
+            <h3>多模态表达</h3>
+            <p>将文字脚本转为语音、口型、画面和字幕，形成可观看、可聆听的数字人输出。</p>
+            <hr class="divider">
+            <p class="proof"><i class="bi bi-patch-check-fill"></i> 证据：<code>web/live_output.html</code>、语音合成缓存</p>
+          </div>
+        </article>
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-shield-check"></i></div>
+            <h3>风险控制</h3>
+            <p>资料约束、内置风险规则、开播前检查和 AI 标识共同降低误答风险。</p>
+            <hr class="divider">
+            <p class="proof"><i class="bi bi-patch-check-fill"></i> 证据：合规检查、预检流程、人工值守项</p>
+          </div>
+        </article>
+        <article class="card card-fill-reset">
+          <div class="card-body">
+            <div class="card-icon"><i class="bi bi-stop-circle"></i></div>
+            <h3>人工接管与复盘</h3>
+            <p>可随时插话、打断、暂停自动内容和紧急停止，并导出运营配置与分析数据。</p>
+            <hr class="divider">
+            <p class="proof"><i class="bi bi-patch-check-fill"></i> 证据：紧急停止、录制、导出运营配置</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <section class="section">
+      <div class="section-heading"><i class="bi bi-camera-reels"></i><h2>建议现场演示脚本</h2></div>
+      <p class="section-desc">用一份已脱敏、已授权且资料完整的示例商品资料，视频控制在 3-5 分钟。</p>
+      <div class="card">
+        <div class="card-body">
+          <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-time">0:00–0:25</span>
+              <div class="text"><h3>WorkBuddy 生成任务</h3><p>输入小微商家直播需求，生成 6 段讲品脚本、10 条互动问题和不虚构事实的验收标准。</p></div>
+            </div>
+            <div class="timeline-item">
+              <span class="timeline-time">0:25–1:30</span>
+              <div class="text"><h3>导入并审核脚本</h3><p>将 WorkBuddy 结果粘贴到 LiveTalking，展示脚本队列、资料边界和 AI 内容审核。</p></div>
+            </div>
+            <div class="timeline-item">
+              <span class="timeline-time">1:30–2:25</span>
+              <div class="text"><h3>打开数字人输出</h3><p>展示画面、语音、字幕和 AI 标识；说明数字人输出是可运行应用，不是静态图片。</p></div>
+            </div>
+            <div class="timeline-item">
+              <span class="timeline-time">2:25–3:35</span>
+              <div class="text"><h3>三类问题分层应答</h3><p>依次测试商品资料内问题、需要模型改写的问题和涉及承诺的超范围问题，展示路由和安全回答。</p></div>
+            </div>
+            <div class="timeline-item">
+              <span class="timeline-time">3:35–4:30</span>
+              <div class="text"><h3>人工接管与复盘</h3><p>人工插话、打断、紧急停止，再由 WorkBuddy 把真实记录整理成验收表和修复计划。</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <section class="section" id="materials">
+      <div class="section-heading"><i class="bi bi-folder2-open"></i><h2>报名材料与真实证据</h2></div>
+      <p class="section-desc">下面的记录表只用于整理演示证据，不会自动生成业绩结论。保存后会保留在当前浏览器。</p>
+      <div class="row-split">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-journal-check"></i> 本次彩排证据记录</div>
+          <div class="card-body">
+            <form id="evidenceForm" class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="evidenceDate">测试日期</label>
+                <input class="form-control" id="evidenceDate" type="date">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="evidenceProducts">资料 / 场景数量</label>
+                <input class="form-control" id="evidenceProducts" inputmode="numeric" placeholder="例如：1">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="evidenceScripts">审核话术数量</label>
+                <input class="form-control" id="evidenceScripts" inputmode="numeric" placeholder="例如：6">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="evidenceComments">模拟评论数量</label>
+                <input class="form-control" id="evidenceComments" inputmode="numeric" placeholder="例如：5">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="evidenceRoute">本地路由命中数量</label>
+                <input class="form-control" id="evidenceRoute" inputmode="numeric">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="evidenceFallback">大模型兜底数量</label>
+                <input class="form-control" id="evidenceFallback" inputmode="numeric">
+              </div>
+              <div class="form-group field-full">
+                <label class="form-label" for="evidenceNotes">问题、修复和证据位置</label>
+                <textarea class="form-control" id="evidenceNotes" placeholder="填写录屏文件、截图、日志位置，以及本次彩排发现的问题"></textarea>
+              </div>
+              <div class="form-actions field-full">
+                <button class="btn btn-secondary" type="submit"><i class="bi bi-save"></i> 保存本次记录</button>
+                <button class="btn btn-outline" type="button" id="clearEvidence">清空</button>
+                <span class="text-muted fs-sm" id="evidenceSaved">尚未保存</span>
+              </div>
+            </form>
+          </div>
+        </div>
+        <aside class="card card-fill-reset">
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle"></i>
+              <div class="alert-body">
+                <div class="alert-title">数据使用原则</div>
+                只填写可由日志、录屏、截图、导出文件或现场记录证明的数据。没有证据的字段保持空白，不用估算值代替。
+              </div>
+            </div>
+            <div class="checklist mt-3">
+              <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>知识资料、脚本内容与演示场景保持一致。</span></div>
+              <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>素材、声音、头像和音乐具有明确授权。</span></div>
+              <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>演示前完成本地彩排，并安排真人值守。</span></div>
+              <div class="check-item ok"><i class="bi bi-check-circle-fill"></i><span>录屏和导出文件已去除接口密钥（API Key）、推流密钥和隐私信息。</span></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <div class="alert alert-warning mt-4">
+      <i class="bi bi-exclamation-circle"></i>
+      <div class="alert-body">
+        <div class="alert-title">材料提示</div>
+        赛事页面显示报名截止为 2026 年 10 月 20 日 23:59，作品提交截止为 2026 年 10 月 30 日；正式提交材料请以赛氪官网和组委会最新通知为准。奖金、人才认定和落地政策不属于本系统功能承诺。
+      </div>
+    </div>
+  </main>
+  <script src="/common.js"></script>
+  <script>
+    LT.Nav.current = 'competition';
+    LT.Nav.inject('#lt-nav-container');
+    const $ = (id) => document.getElementById(id);
+    const evidenceKey = 'ailive-competition-evidence-v1';
+
+    function setText(id, text, good) {
+      const element = $(id);
+      element.textContent = text;
+      element.style.color = good ? 'var(--success)' : 'var(--text)';
+    }
+
+    async function loadDemoPreset() {
+      const button = $('loadDemo');
+      const message = $('demoMessage');
+      button.disabled = true;
+      message.textContent = '正在载入合成参赛演示数据…';
+      try {
+        const response = await fetch('/api/live/competition-demo', { method: 'POST' });
+        const body = await response.json();
+        if (body.code !== 0) throw new Error(body.msg || '载入失败');
+        message.textContent = '已载入演示场景。请打开直播工作台连接数字人输出，再开始录屏。';
+        await loadLiveSnapshot();
+      } catch (error) {
+        message.textContent = `载入失败：${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function loadLiveSnapshot() {
+      try {
+        const response = await fetch('/api/live/status');
+        const body = await response.json();
+        if (body.code !== 0) throw new Error(body.msg || 'status error');
+        const data = body.data;
+        setText('serviceState', '在线', true);
+        setText('readinessState', `${data.workflow.score}%`, data.workflow.ready);
+        setText('productState', `${data.sales.ready_count}/${data.sales.products.length}`, data.sales.ready_count > 0);
+        setText('automationState', `${data.autopilot ? '运行中' : '已暂停'} / ${data.subtitle.running ? 'OCR中' : 'OCR未启动'}`, data.autopilot || data.subtitle.running);
+      } catch (error) {
+        setText('serviceState', '离线', false);
+        setText('readinessState', '启动服务后检测', false);
+        setText('productState', '待读取', false);
+        setText('automationState', '待读取', false);
+      }
+    }
+
+    function loadEvidence() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(evidenceKey) || '{}');
+        Object.entries(saved).forEach(([id, value]) => {
+          if ($(id)) $(id).value = value;
+        });
+        if (saved.evidenceDate) $('evidenceSaved').textContent = `已保存：${saved.evidenceDate}`;
+      } catch (error) {
+        $('evidenceSaved').textContent = '本地记录读取失败';
+      }
+    }
+
+    $('evidenceForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const fields = ['evidenceDate', 'evidenceProducts', 'evidenceScripts', 'evidenceComments', 'evidenceRoute', 'evidenceFallback', 'evidenceNotes'];
+      const payload = Object.fromEntries(fields.map((id) => [id, $(id).value.trim()]));
+      localStorage.setItem(evidenceKey, JSON.stringify(payload));
+      $('evidenceSaved').textContent = `已保存：${payload.evidenceDate || '未填写日期'}`;
+    });
+
+    $('clearEvidence').addEventListener('click', () => {
+      localStorage.removeItem(evidenceKey);
+      ['evidenceDate', 'evidenceProducts', 'evidenceScripts', 'evidenceComments', 'evidenceRoute', 'evidenceFallback', 'evidenceNotes'].forEach((id) => { $(id).value = ''; });
+      $('evidenceSaved').textContent = '已清空';
+    });
+
+    $('loadDemo').addEventListener('click', loadDemoPreset);
+    loadEvidence();
+    loadLiveSnapshot();
+  </script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>直播输出 - LiveTalking</title>
+  <link rel="stylesheet" href="common.css">
+  <style>
+    /* 本页是给 OBS / 浏览器源采集的纯画面页，刻意不注入导航，保持极简结构。
+       仅让字体、按钮与状态配色跟随 v3 设计系统，画面本身的自定义渲染保持不变。 */
+    :root {
+      color-scheme: dark;
+      /* 本页恒定深色（供 OBS / 浏览器源采集），不跟随主题切换。
+         必须把文字令牌固定为深色主题值：否则在浅色主题下 --text 会解析成深色
+         （#0f172a），压在深色画面上对比度只有 1.1:1，标题完全看不见。 */
+      --text: #eef4ff;
+      --text-secondary: #c3ccdd;
+      --text-muted: #9aa6bd;
+      --border: rgba(255, 255, 255, 0.16);
+      --card-bg: rgba(12, 18, 32, 0.82);
+      --surface-sunken: rgba(255, 255, 255, 0.04);
+    }
+    * { box-sizing:border-box; }
+    html,body { width:100%; height:100%; margin:0; overflow:hidden; background:#080b12; font-family:var(--font-sans); }
+    #stage { position:relative; width:100vw; height:100vh; overflow:hidden; background:#080b12; }
+    video { position:absolute; inset:0; width:100%; height:100%; }
+    #bgVideo { object-fit:cover; filter:blur(34px) brightness(.42) saturate(1.15); transform:scale(1.12); }
+    #mainVideo { object-fit:contain; }
+    #stage.cover #mainVideo { object-fit:cover; }
+    .vignette { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(0,0,0,.44) 0%,transparent 23%,transparent 62%,rgba(0,0,0,.72) 100%); }
+    .header { position:absolute; left:4.5%; right:4.5%; top:3.5%; display:flex; align-items:flex-start; justify-content:space-between; gap:14px; text-shadow:0 2px 10px rgba(0,0,0,.8); }
+    .title { font-weight:800; font-size:clamp(17px,3.1vw,34px); letter-spacing:.04em; max-width:72%; color:#f2f6ff; }
+    .ai-label { display:inline-flex; align-items:center; gap:7px; margin-top:9px; padding:6px 11px; border-radius:999px; background:rgba(12,18,30,.68); border:1px solid rgba(255,255,255,.28); font-size:clamp(10px,1.65vw,16px); color:#eef4ff; backdrop-filter:blur(10px); }
+    .ai-dot { width:8px; height:8px; background:#60a5fa; border-radius:50%; box-shadow:0 0 12px #60a5fa; }
+    #productBadge { display:none; margin-top:10px; max-width:min(88vw,720px); padding:8px 12px; border-radius:12px; background:rgba(5,150,105,.78); border:1px solid rgba(255,255,255,.28); color:white; font-size:clamp(11px,1.8vw,18px); font-weight:700; backdrop-filter:blur(10px); }
+    .connection { padding:7px 10px; border-radius:999px; background:rgba(0,0,0,.5); font-size:11px; color:#fca5a5; }
+    .connection.on { color:#a7f3d0; }
+    .dialogue { position:absolute; left:5%; right:5%; bottom:7%; display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none; }
+    #question { max-width:92%; padding:8px 13px; border-radius:12px; background:rgba(37,99,235,.76); color:white; font-size:clamp(11px,1.8vw,18px); opacity:0; transform:translateY(8px); transition:.25s; }
+    #question.show { opacity:1; transform:translateY(0); }
+    #subtitle { max-width:96%; padding:12px 18px; border-radius:15px; background:rgba(4,8,16,.74); border:1px solid rgba(255,255,255,.18); color:white; font-size:clamp(18px,3vw,34px); line-height:1.48; font-weight:700; text-align:center; text-shadow:0 2px 5px #000; opacity:0; transform:translateY(10px); transition:.22s; backdrop-filter:blur(10px); }
+    #subtitle.show { opacity:1; transform:translateY(0); }
+    .watermark { position:absolute; right:3%; bottom:2%; font-size:10px; color:rgba(255,255,255,.55); }
+    #startOverlay { position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; padding:24px; background:radial-gradient(circle at 50% 35%,#21345d,#080b12 65%); }
+    #startCard { max-width:430px; text-align:center; padding:30px 26px; border:1px solid rgba(255,255,255,.16); border-radius:22px; background:rgba(12,18,32,.82); box-shadow:0 22px 70px rgba(0,0,0,.5); }
+    #startCard h1 { margin:0 0 10px; font-size:26px; color:#f2f6ff; }
+    #startCard p { color:#aebbd0; line-height:1.7; font-size:14px; }
+    #startButton { width:100%; margin-top:6px; }
+    #error { color:#fca5a5; margin-top:12px; font-size:13px; white-space:pre-wrap; }
+  </style>
+</head>
+<body>
+<div id="stage">
+  <video id="bgVideo" autoplay playsinline muted></video>
+  <video id="mainVideo" autoplay playsinline muted></video>
+  <audio id="audio" autoplay></audio>
+  <div class="vignette"></div>
+  <div class="header">
+    <div><div id="title" class="title">AI 数字人直播间</div><div class="ai-label"><span class="ai-dot"></span><span id="aiLabel">AI 数字人 · 内容由人工值守</span></div><div id="productBadge"></div></div>
+    <div id="connection" class="connection">未连接</div>
+  </div>
+  <div class="dialogue"><div id="question"></div><div id="subtitle"></div></div>
+  <div class="watermark">LiveTalking · AI 生成内容</div>
+  <div id="startOverlay"><div id="startCard"><h1>直播输出窗口</h1><p>点击后启动数字人画面与声音。请让抖音直播伴侣或视频号直播工具采集这个窗口，并保留 AI 标识。</p><button id="startButton" class="btn btn-primary btn-lg" type="button">启动直播画面</button><div id="error" role="status" aria-live="polite"></div></div></div>
+</div>
+<script>
+let pc=null, sessionid='', eventSource=null, hideSubtitleTimer=null, lastQuestion='';
+const $=id=>document.getElementById(id);
+const query=new URLSearchParams(location.search);
+
+async function startOutput(){
+  $('startButton').disabled=true; $('error').textContent='正在加载数字人…';
+  try{
+    pc=new RTCPeerConnection({sdpSemantics:'unified-plan'});
+    pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'});
+    pc.addEventListener('track',event=>{
+      if(event.track.kind==='video'){$('mainVideo').srcObject=event.streams[0];$('bgVideo').srcObject=event.streams[0]}
+      else $('audio').srcObject=event.streams[0];
+    });
+    pc.addEventListener('connectionstatechange',()=>{
+      const state=pc?pc.connectionState:'new';
+      const textMap={new:'待连接',connecting:'连接中',connected:'输出正常',disconnected:'已断开',failed:'连接失败',closed:'已关闭'};
+      $('connection').textContent=textMap[state]||'连接中';$('connection').className='connection '+(state==='connected'?'on':'');
+    });
+    const offer=await pc.createOffer(); await pc.setLocalDescription(offer); await waitIce();
+    const response=await fetch('/offer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:pc.localDescription.sdp,type:pc.localDescription.type,avatar:query.get('avatar')||undefined})});
+    const answer=await response.json(); if(!answer.sdp)throw new Error(answer.msg||'服务端未返回视频流');
+    sessionid=answer.sessionid; await pc.setRemoteDescription({type:'answer',sdp:answer.sdp});
+    const registered=await api('/api/live/register',{sessionid});
+    applySettings(registered.settings); applyProduct(registered.sales); startEvents(); $('startOverlay').style.display='none';
+  }catch(error){$('error').textContent=error.message||String(error);$('startButton').disabled=false}
+}
+function waitIce(){return new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();const fn=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',fn);resolve()}};pc.addEventListener('icegatheringstatechange',fn)})}
+async function api(url,body){const response=await fetch(url,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const data=await response.json();if(data.code!==0)throw new Error(data.msg);return data.data}
+function applySettings(settings){if(!settings)return;$('title').textContent=settings.title;$('aiLabel').textContent=settings.ai_label;$('stage').className=settings.layout==='cover'?'cover':''}
+function applyProduct(sales){const product=sales&&sales.current_product;const badge=$('productBadge');if(!product){badge.style.display='none';badge.textContent='';return}const publicInfo=[product.name,product.price,product.coupon].filter(Boolean);badge.textContent='当前商品：'+publicInfo.join(' · ')+' · 以商品卡实时信息为准';badge.style.display='block'}
+function startEvents(){
+  eventSource=new EventSource('/sse?sessionid='+encodeURIComponent(sessionid));
+  eventSource.onmessage=event=>{try{const data=JSON.parse(event.data);if(data.status==='start'&&data.text){$('subtitle').textContent=data.text;$('subtitle').classList.add('show');clearTimeout(hideSubtitleTimer)}else if(data.status==='end'){hideSubtitleTimer=setTimeout(()=>$('subtitle').classList.remove('show'),1100)}}catch(_){}};
+}
+async function refresh(){try{const status=await api('/api/live/status');applySettings(status.settings);applyProduct(status.sales);const q=status.subtitle.last_sent_text||'';if(q&&q!==lastQuestion){lastQuestion=q;$('question').textContent='识别：'+q;$('question').classList.add('show');setTimeout(()=>$('question').classList.remove('show'),7000)}}catch(_){}}
+async function cleanup(){if(eventSource)eventSource.close();if(sessionid){try{await fetch('/api/live/unregister',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionid}),keepalive:true})}catch(_){}}if(pc)pc.close()}
+$('startButton').onclick=startOutput; window.addEventListener('beforeunload',cleanup); setInterval(refresh,1500); refresh();
+</script>
+<script src="common.js"></script>
+</body>
+</html>
